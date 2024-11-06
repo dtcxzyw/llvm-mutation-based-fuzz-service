@@ -16,6 +16,7 @@
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Dominators.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/GEPNoWrapFlags.h>
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/InstVisitor.h>
@@ -177,15 +178,51 @@ bool mutateFlags(Instruction &I, bool Add) {
     }
   }
   if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+    // TODO: nuw nusw
     if (Add) {
-      if (!GEP->isInBounds()) {
-        GEP->setIsInBounds();
-        return true;
+      switch (randomUInt(2)) {
+      case 0:
+        if (!GEP->isInBounds()) {
+          GEP->setIsInBounds(true);
+          return true;
+        }
+        break;
+      case 1:
+        if (!GEP->getNoWrapFlags().hasNoUnsignedWrap()) {
+          GEP->setNoWrapFlags(GEP->getNoWrapFlags() |
+                              GEPNoWrapFlags::noUnsignedWrap());
+          return true;
+        }
+        break;
+      case 2:
+        if (!GEP->getNoWrapFlags().hasNoUnsignedSignedWrap()) {
+          GEP->setNoWrapFlags(GEP->getNoWrapFlags() |
+                              GEPNoWrapFlags::noUnsignedSignedWrap());
+          return true;
+        }
+        break;
       }
     } else {
-      if (GEP->isInBounds()) {
-        GEP->setIsInBounds(false);
-        return true;
+      switch (randomUInt(2)) {
+      case 0:
+        if (GEP->isInBounds()) {
+          GEP->setIsInBounds(false);
+          return true;
+        }
+        break;
+      case 1:
+        if (GEP->getNoWrapFlags().hasNoUnsignedWrap()) {
+          GEP->setNoWrapFlags(GEP->getNoWrapFlags().withoutNoUnsignedWrap());
+          return true;
+        }
+        break;
+      case 2:
+        if (GEP->getNoWrapFlags().hasNoUnsignedSignedWrap()) {
+          GEP->setNoWrapFlags(
+              GEP->getNoWrapFlags().withoutNoUnsignedSignedWrap());
+          return true;
+        }
+        break;
       }
     }
   }
@@ -242,7 +279,78 @@ bool mutateFlags(Instruction &I, bool Add) {
       }
     }
   }
-  // TODO: FMF flags
+  if (auto *ICmp = dyn_cast<ICmpInst>(&I)) {
+    if (Add) {
+      if (!ICmp->hasSameSign()) {
+        ICmp->setSameSign();
+        return true;
+      }
+    } else {
+      if (ICmp->hasSameSign()) {
+        ICmp->setSameSign(false);
+        return true;
+      }
+    }
+  }
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
+    if (Add) {
+      switch (randomUInt(2)) {
+      case 0:
+        if (!FPOp->hasNoInfs()) {
+          I.setHasNoInfs(true);
+          return true;
+        }
+        break;
+      case 1:
+        if (!FPOp->hasNoNaNs()) {
+          I.setHasNoNaNs(true);
+          return true;
+        }
+        break;
+      case 2:
+        if (!FPOp->hasNoSignedZeros()) {
+          I.setHasNoSignedZeros(true);
+          return true;
+        }
+        break;
+      }
+    } else {
+      switch (randomUInt(2)) {
+      case 0:
+        if (FPOp->hasNoInfs()) {
+          I.setHasNoInfs(false);
+          return true;
+        }
+        break;
+      case 1:
+        if (FPOp->hasNoNaNs()) {
+          I.setHasNoNaNs(false);
+          return true;
+        }
+        break;
+      case 2:
+        if (FPOp->hasNoSignedZeros()) {
+          I.setHasNoSignedZeros(false);
+          return true;
+        }
+        break;
+      }
+    }
+  }
+  if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::abs:
+    case Intrinsic::ctlz:
+    case Intrinsic::cttz:
+      if (Add == cast<Constant>(II->getArgOperand(1))->isNullValue()) {
+        II->setArgOperand(
+            1, ConstantInt::getBool(II->getArgOperand(1)->getType(), Add));
+        return true;
+      }
+    default:
+      break;
+    }
+  }
   return false;
 }
 bool addFlags(Instruction &I) { return mutateFlags(I, /*Add=*/true); }
@@ -331,6 +439,12 @@ bool commuteOperands(Instruction &I) {
     }
     return false;
   }
+  if (auto *SI = dyn_cast<SelectInst>(&I)) {
+    if (match(SI, m_LogicalOp(m_Value(), m_Value())))
+      return false;
+    SI->swapValues();
+    return true;
+  }
   if (I.getNumOperands() < 2)
     return false;
   if (I.getOperand(0)->getType() != I.getOperand(1)->getType())
@@ -341,6 +455,19 @@ bool commuteOperands(Instruction &I) {
 bool commuteOperandsOfCommutativeInst(Instruction &I) {
   if (I.getNumOperands() < 2)
     return false;
+  if (auto *SI = dyn_cast<SelectInst>(&I)) {
+    if (match(SI, m_LogicalOp(m_Value(), m_Value())))
+      return false;
+    Value *X;
+    if (match(SI->getCondition(), m_Not(m_Value(X))))
+      SI->setCondition(X);
+    else if (auto *Cmp = dyn_cast<CmpInst>(SI->getCondition()))
+      Cmp->setPredicate(Cmp->getInversePredicate());
+    else
+      return false;
+    SI->swapValues();
+    return true;
+  }
   if (isa<Constant>(I.getOperand(1)))
     return false;
   if (auto *Cmp = dyn_cast<CmpInst>(&I)) {
@@ -359,11 +486,46 @@ bool mutateRetAttr(Instruction &I) {
   // TODO
   return false;
 }
+std::string getTypeName(Type *Ty) {
+  if (Ty->isIntegerTy())
+    return "i" + std::to_string(Ty->getScalarSizeInBits());
+  if (Ty->isFloatTy())
+    return "f32";
+  if (Ty->isDoubleTy())
+    return "f64";
+  if (Ty->isHalfTy())
+    return "f16";
+  if (Ty->isBFloatTy())
+    return "bf16";
+  if (Ty->isPointerTy())
+    return "ptr";
+  if (auto *Vec = dyn_cast<FixedVectorType>(Ty)) {
+    auto Sub = getTypeName(Vec->getElementType());
+    if (Sub.empty())
+      return "";
+    return std::to_string(Vec->getNumElements()) + "x" + Sub;
+  }
+  return "";
+}
 bool breakOneUse(Instruction &I) {
   if (!I.hasOneUse())
     return false;
-  // TODO
-  return false;
+  if (!I.getType()->isSingleValueType())
+    return false;
+  if (I.isTerminator())
+    return false;
+  if (isa<PHINode>(&I))
+    return false;
+
+  auto *Ty = I.getType();
+  auto TyName = getTypeName(Ty);
+  auto *M = I.getModule();
+  auto Callee = M->getOrInsertFunction(
+      "fuzz_use_" + TyName,
+      FunctionType::get(Type::getVoidTy(M->getContext()), {Ty}, false));
+  IRBuilder<> Builder(I.getNextNode());
+  Builder.CreateCall(Callee, &I);
+  return true;
 }
 bool mutateArgAttr(Argument &Arg) {
   switch (randomUInt(1)) {
@@ -402,11 +564,12 @@ bool mutateInst(Instruction &I) {
   }
   return true;
 }
+constexpr uint32_t MaxIter = 100;
 
 bool correctnessCheck(Function &F) {
   uint32_t MutationCount = randomInt(1, 5);
   uint32_t MutationIter = 0;
-  uint32_t MaxIter = MutationCount * 100;
+  uint32_t MaxIter = MutationCount * MaxIter;
 
   for (uint32_t I = 0; I < MaxIter; ++I) {
     uint32_t Size = F.arg_size();
@@ -433,12 +596,16 @@ bool correctnessCheck(Function &F) {
 }
 
 bool commutativeCheck(Function &F) {
-  uint32_t MaxIter = 100;
-
   for (uint32_t I = 0; I < MaxIter; ++I) {
+    uint32_t Size = F.arg_size();
+    for (auto &BB : F)
+      Size += BB.size();
+    uint32_t Pos = randomUInt(Size - 1);
+    uint32_t Idx = 0;
+
     for (auto &BB : F) {
       for (auto &I : BB) {
-        if (randomBool() && commuteOperandsOfCommutativeInst(I)) {
+        if ((Idx++ == Pos) && commuteOperandsOfCommutativeInst(I)) {
           return true;
         }
       }
@@ -447,12 +614,16 @@ bool commutativeCheck(Function &F) {
   return false;
 }
 bool multiUseCheck(Function &F) {
-  uint32_t MaxIter = 100;
-
   for (uint32_t I = 0; I < MaxIter; ++I) {
+    uint32_t Size = F.arg_size();
+    for (auto &BB : F)
+      Size += BB.size();
+    uint32_t Pos = randomUInt(Size - 1);
+    uint32_t Idx = 0;
+
     for (auto &BB : F) {
       for (auto &I : BB) {
-        if (randomBool() && breakOneUse(I)) {
+        if ((Idx++ == Pos) && breakOneUse(I)) {
           return true;
         }
       }
@@ -461,12 +632,16 @@ bool multiUseCheck(Function &F) {
   return false;
 }
 bool flagPreservingCheck(Function &F) {
-  uint32_t MaxIter = 100;
-
   for (uint32_t I = 0; I < MaxIter; ++I) {
+    uint32_t Size = F.arg_size();
+    for (auto &BB : F)
+      Size += BB.size();
+    uint32_t Pos = randomUInt(Size - 1);
+    uint32_t Idx = 0;
+
     for (auto &BB : F) {
       for (auto &I : BB) {
-        if (randomBool() && addFlags(I)) {
+        if ((Idx++ == Pos) && addFlags(I)) {
           return true;
         }
       }
@@ -475,12 +650,16 @@ bool flagPreservingCheck(Function &F) {
   return false;
 }
 bool flagDroppingCheck(Function &F) {
-  uint32_t MaxIter = 100;
-
   for (uint32_t I = 0; I < MaxIter; ++I) {
+    uint32_t Size = F.arg_size();
+    for (auto &BB : F)
+      Size += BB.size();
+    uint32_t Pos = randomUInt(Size - 1);
+    uint32_t Idx = 0;
+
     for (auto &BB : F) {
       for (auto &I : BB) {
-        if (randomBool() && dropFlags(I)) {
+        if ((Idx++ == Pos) && dropFlags(I)) {
           return true;
         }
       }
@@ -536,6 +715,9 @@ int main(int argc, char **argv) {
   }
   for (auto *Func : ErasedFuncs)
     Func->eraseFromParent();
+
+  // if (verifyModule(*M, &errs()))
+  //   return EXIT_FAILURE;
 
   std::error_code EC;
   raw_fd_ostream OS(OutputFile, EC, sys::fs::OF_Text);

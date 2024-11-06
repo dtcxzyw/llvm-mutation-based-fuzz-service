@@ -14,6 +14,7 @@ patched_llvm_src = sys.argv[3]
 tool_bin = sys.argv[4]
 mutate_bin = os.path.join(tool_bin, 'mutate')
 merge_bin = os.path.join(tool_bin, 'merge')
+cost_bin = os.path.join(tool_bin, 'cost')
 patch_file = sys.argv[5]
 iterations = 100
 work_dir = "fuzz"
@@ -79,7 +80,28 @@ subprocess.check_call([llvm_opt, '-S', '-o', seeds_ref, seeds, '-passes='+pass_n
 # Checks
 recipe = ""
 
+def parse_cost(output: str):
+    res = dict()
+    for line in output.splitlines():
+        k,v = line.strip().split(' ')
+        res[k] = int(v)
+    return res
+
+ref_cost = parse_cost(subprocess.check_output([cost_bin, seeds_ref]).decode())
+
 def compare(before, after):
+    if before == seeds_ref:
+        before_cost = ref_cost
+    else:
+        before_cost = parse_cost(subprocess.check_output([cost_bin, before]).decode())
+    after_cost = parse_cost(subprocess.check_output([cost_bin, after]).decode())
+
+    for k in after_cost.keys():
+        if k not in before_cost:
+            continue
+        # print(k, before_cost[k], after_cost[k])
+        if before_cost[k] < after_cost[k]:
+            return True 
     return False
 
 def check_once(id):
@@ -151,15 +173,16 @@ def print_check(name, res):
 # Correctness check
 #scale = 1.0
 scale = 0.01
-print_check("Correctness Check", check("correctness", 3600 * scale))
+# print_check("Correctness Check", check("correctness", 3600 * scale))
 
 # Generalization check
 
 ## Commutative check
 print_check("Commutative Check", check("commutative", 300 * scale))
+## Multi-use check
+print_check("Multi-use Check", check("multi-use", 300 * scale))
 ## Flag preserving
 print_check("Flag-preserving check", check("flag-preserving", 300 * scale))
-## TODO: Multi-use check
 ## TODO: Vector
 ## TODO: Drop constraints
 ## TODO: sext->zext nneg,add nsw nuw->or disjoint

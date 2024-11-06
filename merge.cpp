@@ -131,6 +131,12 @@ int main(int argc, char **argv) {
                 continue;
               }
             }
+            if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
+              I.setHasAllowContract(false);
+              I.setHasAllowReassoc(false);
+              I.setHasAllowReciprocal(false);
+              I.setHasApproxFunc(false);
+            }
           }
 
           for (auto Succ : successors(&BB)) {
