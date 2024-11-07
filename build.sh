@@ -17,3 +17,9 @@ mkdir -p alive2-build
 cd alive2-build
 cmake ../alive2 -GNinja -DCMAKE_PREFIX_PATH=../llvm-build/ -DBUILD_TV=1 -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 cmake --build . -j 32 -t alive-tv
+
+cd ..
+mkdir -p build
+cd build
+cmake .. -GNinja -DLLVM_DIR=$(pwd)/../llvm-build/lib/cmake/llvm -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+cmake --build . -j
