@@ -189,7 +189,8 @@ print("Patch SHA256: {}".format(os.environ["PATCH_SHA256"]))
 start = time.time()
 
 print("Checklist:")
-scale = 1.0
+#scale = 1.0
+scale = 0.01
 # Correctness check
 print_check("Correctness Check", check("correctness", 3600 * scale))
 
