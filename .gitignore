@@ -1,5 +1,6 @@
 build
 llvm-build
+alive2-build
 .vscode
 .cache
 patch.diff
