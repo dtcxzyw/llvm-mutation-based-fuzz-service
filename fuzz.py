@@ -16,7 +16,6 @@ mutate_bin = os.path.join(tool_bin, 'mutate')
 merge_bin = os.path.join(tool_bin, 'merge')
 cost_bin = os.path.join(tool_bin, 'cost')
 patch_file = sys.argv[5]
-iterations = 100
 work_dir = "fuzz"
 
 keywords = [
@@ -181,7 +180,7 @@ def check(recipe_arg, time_budget):
     return False
 
 def print_check(name, res):
-    print("\u274c" if res else "\u2705", name)
+    print(" ", "\u274c" if res else "\u2705", name)
 
 print("Baseline: https://github.com/llvm/llvm-project/commit/{}".format(os.environ["LLVM_REVISION"]))
 print("Patch URL: {}".format(os.environ["COMMIT_URL"]))
@@ -192,18 +191,18 @@ print("Checklist:")
 #scale = 1.0
 scale = 0.01
 # Correctness check
-print_check("Correctness Check", check("correctness", 3600 * scale))
+print_check("Correctness", check("correctness", 3600 * scale))
 
 # Generalization check
 
 ## Commutative check
-print_check("Commutative Check", check("commutative", 300 * scale))
+print_check("Commutative op handling", check("commutative", 300 * scale))
 ## Multi-use check
-print_check("Multi-use Check", check("multi-use", 300 * scale))
-## Flag preserving check
-print_check("Flag-preserving check", check("flag-preserving", 300 * scale))
+print_check("Multi-use handling", check("multi-use", 300 * scale))
+## Flag preservation check
+print_check("Flag preservation", check("flag-preserving", 300 * scale))
 ## Canonical form check
-print_check("Canonical form check", check("canonical-form", 300 * scale))
+print_check("Canonical form handling", check("canonical-form", 300 * scale))
 ## TODO: Vector
 ## TODO: Drop constraints
 
