@@ -431,6 +431,68 @@ bool mutateOpcode(Instruction &I) {
   // [s|u]cmp
   return false;
 }
+bool canonicalizeOp(Instruction &I) {
+  switch (I.getOpcode()) {
+  // sext -> zext nneg
+  case Instruction::SExt:
+    return createNewInst(I, [&](IRBuilder<> &Builder) {
+      return Builder.CreateZExt(I.getOperand(0), I.getType(), I.getName(),
+                                /*IsNonNeg=*/true);
+    });
+  // sitofp -> uitofp nneg
+  case Instruction::SIToFP:
+    return createNewInst(I, [&](IRBuilder<> &Builder) {
+      return Builder.CreateUIToFP(I.getOperand(0), I.getType(), I.getName(),
+                                  /*IsNonNeg=*/true);
+    });
+  // xor/add -> or disjoint
+  case Instruction::Xor:
+  case Instruction::Add:
+    return createNewInst(I, [&](IRBuilder<> &Builder) {
+      auto *Val =
+          Builder.CreateOr(I.getOperand(0), I.getOperand(1), I.getName());
+      if (auto *Or = dyn_cast<PossiblyDisjointInst>(Val))
+        Or->setIsDisjoint(true);
+      return Val;
+    });
+  // icmp spred -> icmp samesign upred
+  case Instruction::ICmp: {
+    auto *Cmp = cast<ICmpInst>(&I);
+    if (Cmp->isUnsigned()) {
+      Cmp->setSameSign(true);
+      Cmp->setPredicate(Cmp->getUnsignedPredicate());
+      return true;
+    }
+    break;
+  }
+  // fcmp unordered -> fcmp nnan ordered
+  case Instruction::FCmp: {
+    auto *Cmp = cast<FCmpInst>(&I);
+    if (FCmpInst::isUnordered(Cmp->getPredicate())) {
+      Cmp->setHasNoNaNs(true);
+      Cmp->setPredicate(Cmp->getOrderedPredicate());
+      return true;
+    }
+    break;
+  }
+  // logical -> bitwise
+  case Instruction::Select: {
+    Value *X, *Y;
+    if (match(&I, m_LogicalAnd(m_Value(X), m_Value(Y))))
+      return createNewInst(I, [&](IRBuilder<> &Builder) {
+        return Builder.CreateAnd(X, Y, I.getName());
+      });
+    if (match(&I, m_LogicalOr(m_Value(X), m_Value(Y))))
+      return createNewInst(I, [&](IRBuilder<> &Builder) {
+        return Builder.CreateOr(X, Y, I.getName());
+      });
+    break;
+  }
+  default:
+    break;
+  }
+  return false;
+}
 bool commuteOperands(Instruction &I) {
   if (auto *BI = dyn_cast<BranchInst>(&I)) {
     if (BI->isConditional()) {
@@ -595,78 +657,32 @@ bool correctnessCheck(Function &F) {
   return MutationIter != 0;
 }
 
+bool mutateOnce(Function &F, bool (*Mutator)(Instruction &)) {
+  for (uint32_t I = 0; I < MaxIter; ++I) {
+    uint32_t Size = F.arg_size();
+    for (auto &BB : F)
+      Size += BB.size();
+    uint32_t Pos = randomUInt(Size - 1);
+    uint32_t Idx = 0;
+
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        if ((Idx++ == Pos) && Mutator(I)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 bool commutativeCheck(Function &F) {
-  for (uint32_t I = 0; I < MaxIter; ++I) {
-    uint32_t Size = F.arg_size();
-    for (auto &BB : F)
-      Size += BB.size();
-    uint32_t Pos = randomUInt(Size - 1);
-    uint32_t Idx = 0;
-
-    for (auto &BB : F) {
-      for (auto &I : BB) {
-        if ((Idx++ == Pos) && commuteOperandsOfCommutativeInst(I)) {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
+  return mutateOnce(F, commuteOperandsOfCommutativeInst);
 }
-bool multiUseCheck(Function &F) {
-  for (uint32_t I = 0; I < MaxIter; ++I) {
-    uint32_t Size = F.arg_size();
-    for (auto &BB : F)
-      Size += BB.size();
-    uint32_t Pos = randomUInt(Size - 1);
-    uint32_t Idx = 0;
-
-    for (auto &BB : F) {
-      for (auto &I : BB) {
-        if ((Idx++ == Pos) && breakOneUse(I)) {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
-}
-bool flagPreservingCheck(Function &F) {
-  for (uint32_t I = 0; I < MaxIter; ++I) {
-    uint32_t Size = F.arg_size();
-    for (auto &BB : F)
-      Size += BB.size();
-    uint32_t Pos = randomUInt(Size - 1);
-    uint32_t Idx = 0;
-
-    for (auto &BB : F) {
-      for (auto &I : BB) {
-        if ((Idx++ == Pos) && addFlags(I)) {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
-}
-bool flagDroppingCheck(Function &F) {
-  for (uint32_t I = 0; I < MaxIter; ++I) {
-    uint32_t Size = F.arg_size();
-    for (auto &BB : F)
-      Size += BB.size();
-    uint32_t Pos = randomUInt(Size - 1);
-    uint32_t Idx = 0;
-
-    for (auto &BB : F) {
-      for (auto &I : BB) {
-        if ((Idx++ == Pos) && dropFlags(I)) {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
-}
+bool multiUseCheck(Function &F) { return mutateOnce(F, breakOneUse); }
+bool flagPreservingCheck(Function &F) { return mutateOnce(F, addFlags); }
+bool flagDroppingCheck(Function &F) { return mutateOnce(F, dropFlags); }
+bool canonicalFormCheck(Function &F) { return mutateOnce(F, canonicalizeOp); }
 
 int main(int argc, char **argv) {
   InitLLVM Init{argc, argv};
@@ -702,6 +718,8 @@ int main(int argc, char **argv) {
     mutateFunc = flagPreservingCheck;
   else if (Recipe == "flag-dropping")
     mutateFunc = flagDroppingCheck;
+  else if (Recipe == "canonical-form")
+    mutateFunc = canonicalFormCheck;
   else {
     errs() << "Unknown recipe " << Recipe << "\n";
     return EXIT_FAILURE;

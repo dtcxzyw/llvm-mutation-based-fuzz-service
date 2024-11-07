@@ -124,7 +124,7 @@ def check_once(id):
                 pass
             except Exception:
                 return True
-        elif recipe == "commutative":
+        elif recipe == "commutative" or recipe == "canonical-form":
             if compare(seeds_ref, tgt):
                 return True
         elif recipe == "multi-use":
@@ -181,8 +181,9 @@ scale = 0.01
 print_check("Commutative Check", check("commutative", 300 * scale))
 ## Multi-use check
 print_check("Multi-use Check", check("multi-use", 300 * scale))
-## Flag preserving
+## Flag preserving check
 print_check("Flag-preserving check", check("flag-preserving", 300 * scale))
+## Canonical form check
+print_check("Canonical form check", check("canonical-form", 300 * scale))
 ## TODO: Vector
 ## TODO: Drop constraints
-## TODO: sext->zext nneg,add nsw nuw->or disjoint
