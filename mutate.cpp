@@ -3,7 +3,6 @@
 // This file is licensed under the Apache-2.0 License.
 // See the LICENSE file for more information.
 
-#include <llvm-20/llvm/IR/Attributes.h>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
 #include <llvm/ADT/DenseMap.h>
@@ -11,6 +10,7 @@
 #include <llvm/ADT/STLFunctionalExtras.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Analysis/InstructionSimplify.h>
+#include <llvm/IR/Attributes.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DataLayout.h>
