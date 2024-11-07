@@ -29,6 +29,7 @@ keywords = [
 ('test/Transforms/NewGVN', 'newgvn'),
 ('test/Transforms/Reassociate', 'reassociate'),
 ('test/Transforms/SCCP', 'sccp'),
+('test/Transforms/CorrelatedValuePropagation', 'correlated-propagation'),
 ('test/Transforms/SimplifyCFG', 'simplifycfg'),
 ('PhaseOrdering', 'default<O3>'),
 ]
