@@ -17,7 +17,7 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 include(AddLLVM)
 
 include_directories(${LLVM_INCLUDE_DIRS})
-set(LLVM_LINK_COMPONENTS core support irreader irprinter analysis)
+set(LLVM_LINK_COMPONENTS core support irreader irprinter analysis linker)
 add_llvm_executable(mutate PARTIAL_SOURCES_INTENDED mutate.cpp)
 add_llvm_executable(merge PARTIAL_SOURCES_INTENDED merge.cpp)
 add_llvm_executable(cost PARTIAL_SOURCES_INTENDED cost.cpp)
