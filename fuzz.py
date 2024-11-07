@@ -19,13 +19,25 @@ patch_file = sys.argv[5]
 iterations = 100
 work_dir = "fuzz"
 
-keywords = ['InstCombine','InstSimplify','VectorCombine','ValueTracking']
+keywords = [
+('test/Transforms/InstCombine', 'instcombine'),
+('test/Transforms/InstSimplify', 'instcombine'),
+('test/Analysis/ValueTracking', 'instcombine'),
+('test/Transforms/ConstraintElimination', 'constraint-elimination'),
+('test/Transforms/EarlyCSE', 'early-cse'),
+('test/Transforms/GVN', 'gvn'),
+('test/Transforms/NewGVN', 'newgvn'),
+('test/Transforms/Reassociate', 'reassociate'),
+('test/Transforms/SCCP', 'sccp'),
+('test/Transforms/SimplifyCFG', 'simplifycfg'),
+('PhaseOrdering', 'default<O3>'),
+]
 
 def is_interesting():
     diff_files = subprocess.check_output(['lsdiff', patch_file]).decode()
-    for keyword in keywords:
+    for keyword, pass_name in keywords:
         if keyword in diff_files:
-            return keyword
+            return pass_name
     return None
 
 pass_name = is_interesting()
