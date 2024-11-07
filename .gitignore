@@ -1,4 +1,7 @@
 build
+llvm-build
 .vscode
 .cache
-fuzz_tmp
+patch.diff
+*.log
+CHANGELOGS

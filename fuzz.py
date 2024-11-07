@@ -170,10 +170,15 @@ def check(recipe_arg, time_budget):
 def print_check(name, res):
     print("\u274c" if res else "\u2705", name)
 
+print("Baseline: https://github.com/llvm/llvm-project/commit/{}".format(os.environ["LLVM_REVISION"]))
+print("Patch URL: {}".format(os.environ["COMMIT_URL"]))
+print("Patch SHA256: {}".format(os.environ["PATCH_SHA256"]))
+start = time.time()
+
+print("Checklist:")
+scale = 1.0
 # Correctness check
-#scale = 1.0
-scale = 0.01
-# print_check("Correctness Check", check("correctness", 3600 * scale))
+print_check("Correctness Check", check("correctness", 3600 * scale))
 
 # Generalization check
 
@@ -187,3 +192,6 @@ print_check("Flag-preserving check", check("flag-preserving", 300 * scale))
 print_check("Canonical form check", check("canonical-form", 300 * scale))
 ## TODO: Vector
 ## TODO: Drop constraints
+
+end = time.time()
+print("Time: {}".format(time.strftime("%H:%M:%S", time.gmtime(end-start))))

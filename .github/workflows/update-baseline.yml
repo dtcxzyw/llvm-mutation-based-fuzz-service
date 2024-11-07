@@ -1,0 +1,36 @@
+name: Update Baseline
+
+on:
+  schedule:
+  - cron: "0 0 * * *"
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: self-hosted
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C llvm-project checkout .
+          git -C llvm-project clean -fdx
+
+      - name: Update LLVM
+        run: ${{ github.workspace }}/update_llvm.sh
+
+      - name: Build LLVM
+        run: ${{ github.workspace }}/build.sh
+
+      - name: Update Baseline
+        run: ${{ github.workspace }}/update_baseline.sh

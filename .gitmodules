@@ -1,0 +1,6 @@
+[submodule "llvm-project"]
+	path = llvm-project
+	url = https://github.com/llvm/llvm-project.git
+[submodule "alive2"]
+	path = alive2
+	url = https://github.com/AliveToolkit/alive2.git

@@ -3,6 +3,7 @@
 // This file is licensed under the Apache-2.0 License.
 // See the LICENSE file for more information.
 
+#include <llvm-20/llvm/IR/Attributes.h>
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/APInt.h>
 #include <llvm/ADT/DenseMap.h>
@@ -48,7 +49,6 @@
 #include <cstdlib>
 #include <random>
 #include <string>
-#include <unordered_map>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -178,7 +178,6 @@ bool mutateFlags(Instruction &I, bool Add) {
     }
   }
   if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-    // TODO: nuw nusw
     if (Add) {
       switch (randomUInt(2)) {
       case 0:
@@ -338,17 +337,32 @@ bool mutateFlags(Instruction &I, bool Add) {
     }
   }
   if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::abs:
-    case Intrinsic::ctlz:
-    case Intrinsic::cttz:
-      if (Add == cast<Constant>(II->getArgOperand(1))->isNullValue()) {
-        II->setArgOperand(
-            1, ConstantInt::getBool(II->getArgOperand(1)->getType(), Add));
-        return true;
+    if (II->getType()->isIntOrIntVectorTy() && randomBool()) {
+      // ret attr
+      if (Add) {
+        if (!II->hasRetAttr(Attribute::NoUndef)) {
+          II->addRetAttr(Attribute::NoUndef);
+          return true;
+        }
+      } else {
+        if (II->hasRetAttr(Attribute::NoUndef)) {
+          II->removeRetAttr(Attribute::NoUndef);
+          return true;
+        }
       }
-    default:
-      break;
+    } else {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::abs:
+      case Intrinsic::ctlz:
+      case Intrinsic::cttz:
+        if (Add == cast<Constant>(II->getArgOperand(1))->isNullValue()) {
+          II->setArgOperand(
+              1, ConstantInt::getBool(II->getArgOperand(1)->getType(), Add));
+          return true;
+        }
+      default:
+        break;
+      }
     }
   }
   return false;
@@ -541,13 +555,6 @@ bool commuteOperandsOfCommutativeInst(Instruction &I) {
   I.getOperandUse(0).swap(I.getOperandUse(1));
   return true;
 }
-bool mutateRetAttr(Instruction &I) {
-  auto *Call = dyn_cast<CallInst>(&I);
-  if (!Call || !Call->getType()->isSingleValueType())
-    return false;
-  // TODO
-  return false;
-}
 std::string getTypeName(Type *Ty) {
   if (Ty->isIntegerTy())
     return "i" + std::to_string(Ty->getScalarSizeInBits());
@@ -681,6 +688,7 @@ bool commutativeCheck(Function &F) {
 }
 bool multiUseCheck(Function &F) { return mutateOnce(F, breakOneUse); }
 bool flagPreservingCheck(Function &F) { return mutateOnce(F, addFlags); }
+// TODO: remove noundef/nonnull on args
 bool flagDroppingCheck(Function &F) { return mutateOnce(F, dropFlags); }
 bool canonicalFormCheck(Function &F) { return mutateOnce(F, canonicalizeOp); }
 
