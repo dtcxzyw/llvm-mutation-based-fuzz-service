@@ -17,6 +17,7 @@ merge_bin = os.path.join(tool_bin, 'merge')
 cost_bin = os.path.join(tool_bin, 'cost')
 patch_file = sys.argv[5]
 work_dir = "fuzz"
+fuzz_mode = os.environ['FUZZ_MODE']
 
 keywords = [
 ('test/Transforms/InstCombine', 'instcombine'),
@@ -77,6 +78,7 @@ seeds = collect_seeds()
 if len(seeds) == 0:
     print('No seeds found')
     exit(0)
+seeds_count = len(seeds)
 
 cnt = 0
 for file, func in seeds:
@@ -182,14 +184,15 @@ def check(recipe_arg, time_budget):
 def print_check(name, res):
     print(" ", "\u274c" if res else "\u2705", name)
 
+print("Seeds: {}".format(seeds_count))
+print("Pass: `opt -passes={}`".format(pass_name))
 print("Baseline: https://github.com/llvm/llvm-project/commit/{}".format(os.environ["LLVM_REVISION"]))
 print("Patch URL: {}".format(os.environ["COMMIT_URL"]))
 print("Patch SHA256: {}".format(os.environ["PATCH_SHA256"]))
 start = time.time()
 
 print("Checklist:")
-#scale = 1.0
-scale = 0.01
+scale = 0.01 if fuzz_mode == 'quickfuzz' else 1.0
 # Correctness check
 print_check("Correctness", check("correctness", 3600 * scale))
 

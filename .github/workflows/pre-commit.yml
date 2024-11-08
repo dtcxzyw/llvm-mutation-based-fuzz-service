@@ -38,6 +38,8 @@ jobs:
 
       - name: Run Fuzzing
         run: ${{ github.workspace }}/fuzz.sh
+        env:
+          FUZZ_MODE: ${{ github.event.label.name }}
 
       - name: Artifact
         uses: actions/upload-artifact@v4
