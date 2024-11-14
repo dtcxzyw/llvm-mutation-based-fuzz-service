@@ -177,6 +177,13 @@ def check(recipe_arg, time_budget):
             for res in pool.imap_unordered(check_once, range(idx, idx + files_per_iter)):
                 final_res |= res
             if final_res:
+                # only keep at most 5 file
+                cnt = 5
+                for file in os.listdir(work_dir):
+                    if file.startswith(recipe):
+                       cnt -= 1
+                       if cnt < 0:
+                           os.remove(os.path.join(work_dir, file)) 
                 return True
             idx += files_per_iter
     return False
