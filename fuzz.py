@@ -179,11 +179,17 @@ def check(recipe_arg, time_budget):
             if final_res:
                 # only keep at most 5 file
                 cnt = 5
+                kept_files = []
                 for file in os.listdir(work_dir):
                     if file.startswith(recipe):
-                       cnt -= 1
-                       if cnt < 0:
-                           os.remove(os.path.join(work_dir, file)) 
+                        name = file.split('.')[0]
+                        if name in kept_files:
+                            continue
+                        cnt -= 1
+                        if cnt >= 0:
+                            kept_files.append(name)
+                        else:
+                            os.remove(os.path.join(work_dir, file)) 
                 return True
             idx += files_per_iter
     return False
