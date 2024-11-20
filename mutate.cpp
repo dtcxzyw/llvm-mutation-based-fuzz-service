@@ -10,6 +10,7 @@
 #include <llvm/ADT/STLFunctionalExtras.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Analysis/InstructionSimplify.h>
+#include <llvm/IR/Argument.h>
 #include <llvm/IR/Attributes.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constants.h>
@@ -616,10 +617,27 @@ bool mutateArgAttr(Argument &Arg) {
   }
   return false;
 }
+bool replaceArgUse(Instruction &I) {
+  SmallVector<Use *> Uses;
+  for (auto &Op : I.operands())
+    if (isa<Argument>(Op) && !Op->hasOneUse())
+      Uses.push_back(&Op);
+  if (Uses.empty())
+    return false;
+  auto &Op = *Uses[randomUInt(Uses.size() - 1)];
+  SmallVector<Argument *> Replacements;
+  for (auto &Arg : I.getFunction()->args())
+    if (Arg.getType() == Op->getType() && &Arg != Op.get())
+      Replacements.push_back(&Arg);
+  if (Replacements.empty())
+    return false;
+  Op->replaceAllUsesWith(Replacements[randomUInt(Replacements.size() - 1)]);
+  return true;
+}
 
 // Recipes
 bool mutateInst(Instruction &I) {
-  switch (randomUInt(4)) {
+  switch (randomUInt(5)) {
   case 0:
     return mutateConstant(I);
   case 1:
@@ -630,15 +648,17 @@ bool mutateInst(Instruction &I) {
     return mutateOpcode(I);
   case 4:
     return commuteOperands(I);
+  case 5:
+    return replaceArgUse(I);
   }
-  return true;
+  llvm_unreachable("Unreachable code");
 }
-constexpr uint32_t MaxIter = 100;
+constexpr uint32_t MaxIterFactor = 100;
 
 bool correctnessCheck(Function &F) {
   uint32_t MutationCount = randomInt(1, 5);
   uint32_t MutationIter = 0;
-  uint32_t MaxIter = MutationCount * MaxIter;
+  uint32_t MaxIter = MutationCount * MaxIterFactor;
 
   for (uint32_t I = 0; I < MaxIter; ++I) {
     uint32_t Size = F.arg_size();
@@ -665,7 +685,7 @@ bool correctnessCheck(Function &F) {
 }
 
 bool mutateOnce(Function &F, bool (*Mutator)(Instruction &)) {
-  for (uint32_t I = 0; I < MaxIter; ++I) {
+  for (uint32_t I = 0; I < MaxIterFactor; ++I) {
     uint32_t Size = F.arg_size();
     for (auto &BB : F)
       Size += BB.size();
