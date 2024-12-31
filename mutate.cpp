@@ -524,6 +524,8 @@ bool commuteOperands(Instruction &I) {
   }
   if (I.getNumOperands() < 2)
     return false;
+  if (isa<PHINode>(&I))
+    return false;
   if (I.getOperand(0)->getType() != I.getOperand(1)->getType())
     return false;
   I.getOperandUse(0).swap(I.getOperandUse(1));
