@@ -11,13 +11,16 @@
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Analysis/InstructionSimplify.h>
+#include <llvm/IR/Argument.h>
 #include <llvm/IR/Attributes.h>
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constant.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Dominators.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/InstVisitor.h>
@@ -49,10 +52,7 @@
 #include <llvm/Support/raw_ostream.h>
 #include <cstdlib>
 #include <filesystem>
-#include <random>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -64,6 +64,37 @@ static cl::opt<std::string> SeedsDir(cl::Positional, cl::desc("<seeds dir>"),
 static cl::opt<std::string> OutputFile(cl::Positional,
                                        cl::desc("<output file>"), cl::Required,
                                        cl::value_desc("path to seed file"));
+static bool isValidType(Type *Ty) {
+  if (Ty->isScalableTy())
+    return false;
+  if (Ty->isVoidTy() || Ty->isIntOrIntVectorTy() || Ty->isLabelTy())
+    return true;
+  if (Ty->isPtrOrPtrVectorTy())
+    return cast<PointerType>(Ty->getScalarType())->getAddressSpace() == 0;
+  if (Ty->isFPOrFPVectorTy()) {
+    auto *Scalar = Ty->getScalarType();
+    return Scalar->isFloatTy() || Scalar->isHalfTy() || Scalar->isDoubleTy();
+  }
+  if (Ty->isArrayTy())
+    return isValidType(Ty->getArrayElementType());
+  if (auto *StructTy = dyn_cast<StructType>(Ty)) {
+    if (StructTy->isOpaque() || StructTy->isPacked())
+      return false;
+    for (uint32_t I = 0, E = StructTy->getNumElements(); I != E; ++I)
+      if (!isValidType(StructTy->getElementType(I)))
+        return false;
+    return true;
+  }
+  return false;
+}
+static bool hasUnsupportedType(Instruction &I) {
+  if (!isValidType(I.getType()))
+    return true;
+  for (auto &Operand : I.operands())
+    if (!isValidType(Operand->getType()))
+      return true;
+  return false;
+}
 
 int main(int argc, char **argv) {
   InitLLVM Init{argc, argv};
@@ -78,6 +109,8 @@ int main(int argc, char **argv) {
   while (OutM.size() < BatchSize) {
     for (auto &Seed : fs::directory_iterator(SeedsDir.c_str())) {
       DenseSet<StringRef> Symbols;
+      for (auto &GV : OutM.globals())
+        Symbols.insert(GV.getName());
       for (auto &F : OutM.functions())
         Symbols.insert(F.getName());
 
@@ -87,7 +120,11 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
       }
 
-      SmallPtrSet<Function *, 16> ErasedFuncs;
+      SmallPtrSet<GlobalValue *, 16> ErasedGlobals;
+      for (auto &Alias : M->aliases()) {
+        ErasedGlobals.insert(&Alias);
+      }
+
       for (auto &GV : M->globals()) {
         StringRef Name = GV.getName();
         uint32_t Id = 0;
@@ -95,6 +132,10 @@ int main(int argc, char **argv) {
           do {
             GV.setName(Name + std::to_string(++Id));
           } while (Symbols.count(GV.getName()));
+        }
+
+        if (GV.getAddressSpace() != 0 || !isValidType(GV.getValueType())) {
+          ErasedGlobals.insert(&GV);
         }
       }
 
@@ -111,24 +152,99 @@ int main(int argc, char **argv) {
         }
 
         DominatorTree DT(F);
+        if (!isValidType(F.getReturnType()) ||
+            (!F.arg_empty() && !all_of(F.args(), [](Argument &Arg) {
+              return isValidType(Arg.getType());
+            }))) {
+          ErasedGlobals.insert(&F);
+          continue;
+        }
+
+        for (auto &Arg : F.args()) {
+          Arg.removeAttr(Attribute::NoAlias);
+        }
 
         for (auto &BB : F) {
           for (auto &I : make_early_inc_range(BB)) {
             I.dropUnknownNonDebugMetadata({Attribute::NoUndef,
                                            Attribute::Dereferenceable,
                                            Attribute::Range});
-            if (I.getOpcode() == Instruction::IntToPtr) {
-              ErasedFuncs.insert(&F);
-              continue;
+            if (hasUnsupportedType(I) ||
+                I.getOpcode() == Instruction::IntToPtr || isa<StoreInst>(I) ||
+                isa<AtomicRMWInst>(I) || isa<AtomicCmpXchgInst>(I) ||
+                isa<AllocaInst>(I)) {
+              ErasedGlobals.insert(&F);
+              break;
+            }
+            if (auto *Load = dyn_cast<LoadInst>(&I)) {
+              if (!Load->isSimple()) {
+                ErasedGlobals.insert(&F);
+                break;
+              }
             }
             if (I.isDebugOrPseudoInst()) {
               I.eraseFromParent();
               continue;
             }
+            if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+              if (!isValidType(GEP->getSourceElementType())) {
+                ErasedGlobals.insert(&F);
+                break;
+              }
+            }
             if (auto *Call = dyn_cast<CallBase>(&I)) {
-              if (!isa<IntrinsicInst>(Call)) {
-                ErasedFuncs.insert(&F);
-                continue;
+              bool Known = false;
+              if (auto *II = dyn_cast<IntrinsicInst>(Call)) {
+                switch (II->getIntrinsicID()) {
+                case Intrinsic::umax:
+                case Intrinsic::umin:
+                case Intrinsic::smax:
+                case Intrinsic::smin:
+                case Intrinsic::abs:
+                case Intrinsic::ctlz:
+                case Intrinsic::cttz:
+                case Intrinsic::ctpop:
+                case Intrinsic::sadd_sat:
+                case Intrinsic::ssub_sat:
+                case Intrinsic::sshl_sat:
+                case Intrinsic::uadd_sat:
+                case Intrinsic::usub_sat:
+                case Intrinsic::ushl_sat:
+                case Intrinsic::sadd_with_overflow:
+                case Intrinsic::ssub_with_overflow:
+                case Intrinsic::smul_with_overflow:
+                case Intrinsic::uadd_with_overflow:
+                case Intrinsic::usub_with_overflow:
+                case Intrinsic::umul_with_overflow:
+                case Intrinsic::fshl:
+                case Intrinsic::fshr:
+                case Intrinsic::bitreverse:
+                case Intrinsic::bswap:
+                case Intrinsic::fabs:
+                case Intrinsic::copysign:
+                case Intrinsic::is_fpclass:
+                case Intrinsic::fma:
+                case Intrinsic::fmuladd:
+                case Intrinsic::maximum:
+                case Intrinsic::maximumnum:
+                case Intrinsic::maxnum:
+                case Intrinsic::minimum:
+                case Intrinsic::minimumnum:
+                case Intrinsic::minnum:
+                  Known = true;
+                default:
+                  break;
+                }
+              }
+              if (!Known) {
+                ErasedGlobals.insert(&F);
+                break;
+              }
+            }
+            if (auto *Sel = dyn_cast<SelectInst>(&I)) {
+              if (Sel->getTrueValue()->getType()->isAggregateType()) {
+                ErasedGlobals.insert(&F);
+                break;
               }
             }
             if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
@@ -136,18 +252,34 @@ int main(int argc, char **argv) {
               I.setHasAllowReassoc(false);
               I.setHasAllowReciprocal(false);
               I.setHasApproxFunc(false);
+              // FIXME
+              I.setHasNoSignedZeros(false);
+            }
+            for (auto &U : I.operands()) {
+              Constant *C;
+              if (isa<ConstantExpr>(U) ||
+                  (isa<UndefValue>(U) && !isa<PoisonValue>(U))) {
+                U.set(Constant::getNullValue(U->getType()));
+              } else if (match(U.get(), m_Constant(C)) &&
+                         C->containsUndefOrPoisonElement()) {
+                Constant *ReplaceC =
+                    Constant::getNullValue(I.getType()->getScalarType());
+                U.set(Constant::replaceUndefsWith(C, ReplaceC));
+              }
             }
           }
 
           for (auto Succ : successors(&BB)) {
             if (DT.dominates(Succ, &BB)) {
-              ErasedFuncs.insert(&F);
+              ErasedGlobals.insert(&F);
               break;
             }
           }
+          if (ErasedGlobals.contains(&F))
+            break;
         }
       }
-      for (auto *F : ErasedFuncs) {
+      for (auto *F : ErasedGlobals) {
         F->replaceAllUsesWith(PoisonValue::get(F->getType()));
         F->eraseFromParent();
       }
@@ -159,6 +291,7 @@ int main(int argc, char **argv) {
       return EXIT_FAILURE;
   }
 
+  // TODO: set datalayout for pointer width
   if (verifyModule(OutM, &errs()))
     return EXIT_FAILURE;
 

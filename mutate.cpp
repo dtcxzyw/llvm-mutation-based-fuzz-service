@@ -13,6 +13,7 @@
 #include <llvm/IR/Argument.h>
 #include <llvm/IR/Attributes.h>
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constant.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -80,6 +81,9 @@ int32_t randomIntNotEqual(int32_t Min, int32_t Max, int32_t NotEqual) {
 // Mutators
 
 bool mutateConstant(Instruction &I) {
+  if (isa<GetElementPtrInst>(I) || isa<SwitchInst>(I) ||
+      match(&I, m_Intrinsic<Intrinsic::is_fpclass>()))
+    return false;
   for (auto &Op : I.operands()) {
     if (!isa<Constant>(Op.get()))
       continue;
@@ -87,6 +91,13 @@ bool mutateConstant(Instruction &I) {
       continue;
     const APInt *C;
     if (match(Op.get(), m_APInt(C))) {
+      if (I.isShift() && &Op == &I.getOperandUse(1)) {
+        Op.set(ConstantInt::get(
+            Op->getType(),
+            APInt(C->getBitWidth(), randomUInt(C->getBitWidth() - 1))));
+        return true;
+      }
+
       switch (randomUInt(3)) {
       case 0: {
         // Special values
@@ -294,7 +305,7 @@ bool mutateFlags(Instruction &I, bool Add) {
   }
   if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
     if (Add) {
-      switch (randomUInt(2)) {
+      switch (randomUInt(1)) {
       case 0:
         if (!FPOp->hasNoInfs()) {
           I.setHasNoInfs(true);
@@ -307,11 +318,12 @@ bool mutateFlags(Instruction &I, bool Add) {
           return true;
         }
         break;
-      case 2:
-        if (!FPOp->hasNoSignedZeros()) {
-          I.setHasNoSignedZeros(true);
-          return true;
-        }
+        // FIXME
+        // case 2:
+        // if (!FPOp->hasNoSignedZeros()) {
+        //   I.setHasNoSignedZeros(true);
+        //   return true;
+        // }
         break;
       }
     } else {
@@ -328,11 +340,12 @@ bool mutateFlags(Instruction &I, bool Add) {
           return true;
         }
         break;
-      case 2:
-        if (FPOp->hasNoSignedZeros()) {
-          I.setHasNoSignedZeros(false);
-          return true;
-        }
+        // FIXME
+        // case 2:
+        //   if (FPOp->hasNoSignedZeros()) {
+        //     I.setHasNoSignedZeros(false);
+        //     return true;
+        //   }
         break;
       }
     }
@@ -392,7 +405,7 @@ bool mutateOpcode(Instruction &I) {
   // logical and/or <-> bitwise and/or
   if (auto *SI = dyn_cast<SelectInst>(&I)) {
     if (SI->getType()->isIntOrIntVectorTy(1) &&
-        SI->getType() == SI->getTrueValue()->getType()) {
+        SI->getType() == SI->getCondition()->getType()) {
       if (match(SI->getTrueValue(), m_One()))
         return createNewInst(I, [&](IRBuilder<> &Builder) {
           return Builder.CreateOr(SI->getCondition(), SI->getFalseValue());
@@ -524,9 +537,11 @@ bool commuteOperands(Instruction &I) {
   }
   if (I.getNumOperands() < 2)
     return false;
-  if (isa<PHINode>(&I))
+  if (isa<PHINode>(&I) || isa<GetElementPtrInst>(&I))
     return false;
   if (I.getOperand(0)->getType() != I.getOperand(1)->getType())
+    return false;
+  if (isa<CallInst>(I) && !I.isCommutative())
     return false;
   I.getOperandUse(0).swap(I.getOperandUse(1));
   return true;
@@ -675,7 +690,7 @@ bool correctnessCheck(Function &F) {
           return true;
       }
     for (auto &BB : F) {
-      for (auto &I : BB) {
+      for (auto &I : make_early_inc_range(BB)) {
         if ((Idx++ == Pos) && mutateInst(I)) {
           if (++MutationIter == MutationCount)
             return true;

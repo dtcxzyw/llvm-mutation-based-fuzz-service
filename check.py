@@ -8,7 +8,7 @@ def check_once_impl(id, work_dir, recipe, seeds, seeds_ref, mutate_bin, llvm_opt
         tgt2 = os.path.join(work_dir, f"{recipe}-{id}.tgt2.ll")
         subprocess.check_call([mutate_bin, seeds, src, recipe])
         try:
-            subprocess.check_call([llvm_opt, '-S', '-o', tgt, src, '-passes='+pass_name],timeout=60)
+            subprocess.check_call([llvm_opt, '-S', '-o', tgt, src, '-passes='+pass_name],timeout=60,stderr=subprocess.DEVNULL)
         except Exception:
             return True
         
