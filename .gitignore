@@ -6,3 +6,4 @@ alive2-build
 patch.diff
 *.log
 CHANGELOGS
+__pycache__
