@@ -543,6 +543,9 @@ bool commuteOperands(Instruction &I) {
     return false;
   if (isa<CallInst>(I) && !I.isCommutative())
     return false;
+  // Workaround for alive2 bug
+  if (I.isShift() && isa<Constant>(I.getOperand(0)))
+    return false;
   I.getOperandUse(0).swap(I.getOperandUse(1));
   return true;
 }

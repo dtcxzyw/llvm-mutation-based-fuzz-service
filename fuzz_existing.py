@@ -28,6 +28,7 @@ os.makedirs(seed_dir)
 
 block_list = [
 'select-cmp-cttz-ctlz.ll', # https://github.com/llvm/llvm-project/issues/121428
+'select-ctlz-to-cttz.ll',
 'minmax-fold.ll', # Known FP issue
 'fneg-fabs.ll', # https://github.com/llvm/llvm-project/issues/121430
 'copysign.ll', # https://github.com/llvm/llvm-project/issues/121432
@@ -36,6 +37,12 @@ block_list = [
 'fabs.ll',
 'fpcast.ll',
 'fcmp.ll',
+'opaque-ptr.ll', # https://github.com/llvm/llvm-project/issues/121459
+'getelementptr.ll', # https://alive2.llvm.org/ce/z/A595rp
+'select-gep.ll', # https://github.com/AliveToolkit/alive2/issues/1110
+'gep-custom-dl.ll', # https://alive2.llvm.org/ce/z/N2EMcm
+'select.ll', # https://alive2.llvm.org/ce/z/imeRWt
+'rem-mul-shl.ll', # https://alive2.llvm.org/ce/z/pbsXkt
 ]
 
 def preprocess(pack):
