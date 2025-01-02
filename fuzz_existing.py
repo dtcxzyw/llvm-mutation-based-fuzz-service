@@ -43,6 +43,8 @@ block_list = [
 'gep-custom-dl.ll', # https://alive2.llvm.org/ce/z/N2EMcm
 'select.ll', # https://alive2.llvm.org/ce/z/imeRWt
 'rem-mul-shl.ll', # https://alive2.llvm.org/ce/z/pbsXkt
+'bit_ceil.ll', # https://alive2.llvm.org/ce/z/k5u63Q
+'intrinsics.ll', # https://alive2.llvm.org/ce/z/oxrPWi
 ]
 
 def preprocess(pack):
@@ -98,8 +100,11 @@ def compare(before, after):
             return True 
     return False
 
+recipes = ['correctness', 'commutative', 'multi-use', 'canonical-form']
+
 def check(id):
-    recipe = 'correctness'
+    # recipe = random.choice(recipes)
+    recipe = recipes[0]
     seed, seed_ref = random.choice(tests)
     if check_once_impl(id, work_dir, recipe, seed, seed_ref, mutate_bin, llvm_opt, alive2_tv, pass_name, compare):
         return (id, recipe, seed)
@@ -112,6 +117,6 @@ with Pool(processes) as pool:
         if res is None:
             continue
         id, recipe, seed = res
-        print(id, recipe, seed)
-        exit(1)
+        progress.write(f"{id} {recipe} {seed}")
+        # exit(1)
 progress.close()
