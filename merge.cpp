@@ -64,6 +64,8 @@ static cl::opt<std::string> SeedsDir(cl::Positional, cl::desc("<seeds dir>"),
 static cl::opt<std::string> OutputFile(cl::Positional,
                                        cl::desc("<output file>"), cl::Required,
                                        cl::value_desc("path to seed file"));
+static cl::opt<bool> IgnoreFP("ignore-fp", cl::desc("Ignore FP ops"),
+                              cl::init(false));
 static bool isValidType(Type *Ty) {
   if (Ty->isScalableTy())
     return false;
@@ -248,6 +250,10 @@ int main(int argc, char **argv) {
               }
             }
             if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
+              if (IgnoreFP) {
+                ErasedGlobals.insert(&F);
+                break;
+              }
               I.setHasAllowContract(false);
               I.setHasAllowReassoc(false);
               I.setHasAllowReciprocal(false);

@@ -27,9 +27,15 @@ seed_dir = os.path.join(work_dir, 'seed')
 os.makedirs(seed_dir)
 
 block_list = [
-'select-cmp-cttz-ctlz.ll' # https://github.com/llvm/llvm-project/issues/121428
+'select-cmp-cttz-ctlz.ll', # https://github.com/llvm/llvm-project/issues/121428
 'minmax-fold.ll', # Known FP issue
 'fneg-fabs.ll', # https://github.com/llvm/llvm-project/issues/121430
+'copysign.ll', # https://github.com/llvm/llvm-project/issues/121432
+'clamp-to-minmax.ll',
+'loadstore-metadata.ll', # noalias.addrspace
+'fabs.ll',
+'fpcast.ll',
+'fcmp.ll',
 ]
 
 def preprocess(pack):
@@ -43,7 +49,7 @@ def preprocess(pack):
             os.makedirs(tmp)
             shutil.copyfile(orig, os.path.join(tmp, 'orig.ll'))
             seed = os.path.join(tmp, 'seed.ll')
-            subprocess.check_call([merge_bin, tmp, seed], stderr=subprocess.DEVNULL)
+            subprocess.check_call([merge_bin, '-ignore-fp', tmp, seed], stderr=subprocess.DEVNULL)
             ref_out = os.path.join(tmp, 'ref.ll')
             subprocess.check_call([llvm_opt,'-passes='+pass_name, seed, '-o', ref_out, '-S'], stderr=subprocess.DEVNULL)
             return (seed, ref_out)

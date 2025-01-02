@@ -82,7 +82,7 @@ int32_t randomIntNotEqual(int32_t Min, int32_t Max, int32_t NotEqual) {
 
 bool mutateConstant(Instruction &I) {
   if (isa<GetElementPtrInst>(I) || isa<SwitchInst>(I) ||
-      match(&I, m_Intrinsic<Intrinsic::is_fpclass>()))
+      match(&I, m_Intrinsic<Intrinsic::is_fpclass>()) || isa<PHINode>(I))
     return false;
   for (auto &Op : I.operands()) {
     if (!isa<Constant>(Op.get()))
