@@ -29,6 +29,7 @@ os.makedirs(seed_dir)
 block_list = [
 'select-cmp-cttz-ctlz.ll', # https://github.com/llvm/llvm-project/issues/121428
 'select-ctlz-to-cttz.ll',
+'intrinsics.ll',
 'minmax-fold.ll', # Known FP issue
 'fneg-fabs.ll', # https://github.com/llvm/llvm-project/issues/121430
 'copysign.ll', # https://github.com/llvm/llvm-project/issues/121432
@@ -41,10 +42,9 @@ block_list = [
 'getelementptr.ll', # https://github.com/AliveToolkit/alive2/pull/1151
 'select-gep.ll', # https://github.com/AliveToolkit/alive2/issues/1110
 'gep-custom-dl.ll', # https://github.com/llvm/llvm-project/issues/121581
-'select.ll', # https://alive2.llvm.org/ce/z/imeRWt
-'rem-mul-shl.ll', # https://alive2.llvm.org/ce/z/pbsXkt
+'select.ll', # https://github.com/llvm/llvm-project/issues/121583
+'rem-mul-shl.ll', # https://github.com/llvm/llvm-project/issues/121584
 'bit_ceil.ll', # https://alive2.llvm.org/ce/z/k5u63Q
-'intrinsics.ll', # https://alive2.llvm.org/ce/z/oxrPWi
 'sign-test-and-or.ll', # https://alive2.llvm.org/ce/z/vbzktq
 '2008-01-13-AndCmpCmp.ll', # https://alive2.llvm.org/ce/z/-eysFm
 ]
