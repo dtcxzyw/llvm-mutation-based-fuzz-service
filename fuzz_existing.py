@@ -38,9 +38,9 @@ block_list = [
 'fpcast.ll',
 'fcmp.ll',
 'opaque-ptr.ll', # https://github.com/llvm/llvm-project/issues/121459
-'getelementptr.ll', # https://alive2.llvm.org/ce/z/A595rp
+'getelementptr.ll', # https://github.com/AliveToolkit/alive2/pull/1151
 'select-gep.ll', # https://github.com/AliveToolkit/alive2/issues/1110
-'gep-custom-dl.ll', # https://alive2.llvm.org/ce/z/N2EMcm
+'gep-custom-dl.ll', # https://github.com/llvm/llvm-project/issues/121581
 'select.ll', # https://alive2.llvm.org/ce/z/imeRWt
 'rem-mul-shl.ll', # https://alive2.llvm.org/ce/z/pbsXkt
 'bit_ceil.ll', # https://alive2.llvm.org/ce/z/k5u63Q

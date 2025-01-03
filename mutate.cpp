@@ -305,7 +305,7 @@ bool mutateFlags(Instruction &I, bool Add) {
   }
   if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
     if (Add) {
-      switch (randomUInt(1)) {
+      switch (randomUInt(2)) {
       case 0:
         if (!FPOp->hasNoInfs()) {
           I.setHasNoInfs(true);
@@ -318,12 +318,11 @@ bool mutateFlags(Instruction &I, bool Add) {
           return true;
         }
         break;
-        // FIXME
-        // case 2:
-        // if (!FPOp->hasNoSignedZeros()) {
-        //   I.setHasNoSignedZeros(true);
-        //   return true;
-        // }
+      case 2:
+        if (!FPOp->hasNoSignedZeros()) {
+          I.setHasNoSignedZeros(true);
+          return true;
+        }
         break;
       }
     } else {
@@ -340,12 +339,11 @@ bool mutateFlags(Instruction &I, bool Add) {
           return true;
         }
         break;
-        // FIXME
-        // case 2:
-        //   if (FPOp->hasNoSignedZeros()) {
-        //     I.setHasNoSignedZeros(false);
-        //     return true;
-        //   }
+      case 2:
+        if (FPOp->hasNoSignedZeros()) {
+          I.setHasNoSignedZeros(false);
+          return true;
+        }
         break;
       }
     }
