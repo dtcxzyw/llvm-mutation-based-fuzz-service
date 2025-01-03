@@ -45,6 +45,8 @@ block_list = [
 'rem-mul-shl.ll', # https://alive2.llvm.org/ce/z/pbsXkt
 'bit_ceil.ll', # https://alive2.llvm.org/ce/z/k5u63Q
 'intrinsics.ll', # https://alive2.llvm.org/ce/z/oxrPWi
+'sign-test-and-or.ll', # https://alive2.llvm.org/ce/z/vbzktq
+'2008-01-13-AndCmpCmp.ll', # https://alive2.llvm.org/ce/z/-eysFm
 ]
 
 def preprocess(pack):
