@@ -95,6 +95,7 @@ def compare(before, after):
             continue
         # print(k, before_cost[k], after_cost[k])
         if before_cost[k] < after_cost[k]:
+            print(k)
             return True 
     return False
 
@@ -102,7 +103,7 @@ recipes = ['correctness', 'commutative', 'multi-use', 'canonical-form']
 
 def check(id):
     # recipe = random.choice(recipes)
-    recipe = recipes[0]
+    recipe = recipes[1]
     seed, seed_ref = random.choice(tests)
     if check_once_impl(id, work_dir, recipe, seed, seed_ref, mutate_bin, llvm_opt, alive2_tv, pass_name, compare):
         return (id, recipe, seed)

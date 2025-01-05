@@ -136,8 +136,8 @@ def check(recipe_arg, time_budget):
             for res in pool.imap_unordered(check_once, range(idx, idx + files_per_iter)):
                 final_res |= res
             if final_res:
-                # only keep at most 5 file
-                cnt = 5
+                # only keep at most 1 file
+                cnt = 1
                 kept_files = []
                 for file in os.listdir(work_dir):
                     if file.startswith(recipe):
