@@ -22,10 +22,10 @@ def check_once_impl(id, work_dir, recipe, seeds, seeds_ref, mutate_bin, llvm_opt
             except Exception:
                 return True
         elif recipe == "commutative" or recipe == "canonical-form":
-            if compare(seeds_ref, tgt):
+            if compare(seeds_ref, tgt, None):
                 return True
         elif recipe == "multi-use":
-            if compare(src, tgt):
+            if compare(src, tgt, seeds_ref):
                 return True
         elif recipe == "flag-preserving":
             subprocess.check_call([mutate_bin, tgt, tgt2, recipe])

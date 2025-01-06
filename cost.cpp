@@ -82,11 +82,51 @@ int main(int argc, char **argv) {
       for (auto &I : BB) {
         if (I.isIntDivRem())
           Cost += 10;
-        else if (I.getOpcode() == Instruction::Mul)
-          Cost += 3;
         else if (I.getOpcode() == Instruction::Load ||
                  I.getOpcode() == Instruction::Store)
           Cost += 4;
+        else if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+          switch (II->getIntrinsicID()) {
+          case Intrinsic::assume:
+          case Intrinsic::lifetime_start:
+          case Intrinsic::lifetime_end:
+          case Intrinsic::is_constant:
+            break;
+          case Intrinsic::sadd_sat:
+          case Intrinsic::uadd_sat:
+          case Intrinsic::ssub_sat:
+          case Intrinsic::usub_sat:
+          case Intrinsic::sshl_sat:
+          case Intrinsic::ushl_sat:
+          case Intrinsic::sadd_with_overflow:
+          case Intrinsic::uadd_with_overflow:
+          case Intrinsic::ssub_with_overflow:
+          case Intrinsic::usub_with_overflow:
+          case Intrinsic::smul_with_overflow:
+          case Intrinsic::umul_with_overflow:
+            Cost += 3;
+            break;
+          case Intrinsic::is_fpclass:
+          case Intrinsic::fabs:
+          case Intrinsic::copysign:
+          case Intrinsic::maximum:
+          case Intrinsic::minimum:
+          case Intrinsic::maximumnum:
+          case Intrinsic::minimumnum:
+          case Intrinsic::maxnum:
+          case Intrinsic::minnum:
+          case Intrinsic::smax:
+          case Intrinsic::smin:
+          case Intrinsic::umax:
+          case Intrinsic::umin:
+            Cost += 1;
+            break;
+          default:
+            Cost += 2;
+            break;
+          }
+        } else if (isa<CallInst>(I))
+          ;
         else
           ++Cost;
       }

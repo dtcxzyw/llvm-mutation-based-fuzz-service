@@ -27,12 +27,8 @@ seed_dir = os.path.join(work_dir, 'seed')
 os.makedirs(seed_dir)
 
 block_list = [
-'select-cmp-cttz-ctlz.ll', # https://github.com/llvm/llvm-project/issues/121428
-'select-ctlz-to-cttz.ll',
-'intrinsics.ll',
 'minmax-fold.ll', # Known FP issue
 'fneg-fabs.ll', # https://github.com/llvm/llvm-project/issues/121430
-'copysign.ll', # https://github.com/llvm/llvm-project/issues/121432
 'clamp-to-minmax.ll',
 'loadstore-metadata.ll', # noalias.addrspace
 'fabs.ll',
@@ -43,6 +39,21 @@ block_list = [
 'bit_ceil.ll', # https://alive2.llvm.org/ce/z/k5u63Q
 'sign-test-and-or.ll', # https://alive2.llvm.org/ce/z/vbzktq
 '2008-01-13-AndCmpCmp.ll', # https://alive2.llvm.org/ce/z/-eysFm
+'icmp-equality-test.ll', # https://github.com/llvm/llvm-project/issues/121702
+'bit-checks.ll', # https://github.com/llvm/llvm-project/issues/121701
+'select-divrem.ll', # https://github.com/llvm/llvm-project/issues/121771
+'preserve-sminmax.ll', # https://github.com/llvm/llvm-project/issues/121772
+'xor-and-or.ll', # https://github.com/llvm/llvm-project/issues/121773
+'select-imm-canon.ll', # https://github.com/llvm/llvm-project/issues/121774
+'select_meta.ll',
+'sadd_sat.ll',
+'unsigned_saturated_sub.ll',
+'and-xor-or.ll', # https://github.com/llvm/llvm-project/issues/121775
+'matching-binops.ll',
+'compare-signs.ll', # https://github.com/llvm/llvm-project/issues/121776
+'minmax-fp.ll', # https://github.com/llvm/llvm-project/issues/121786
+'fast-basictest.ll', # https://github.com/llvm/llvm-project/issues/121790
+'opaque-ptr.ll', # https://alive2.llvm.org/ce/z/FMkBmZ
 ]
 
 def preprocess(pack):
@@ -56,7 +67,9 @@ def preprocess(pack):
             os.makedirs(tmp)
             shutil.copyfile(orig, os.path.join(tmp, 'orig.ll'))
             seed = os.path.join(tmp, 'seed.ll')
-            subprocess.check_call([merge_bin, '-ignore-fp', tmp, seed], stderr=subprocess.DEVNULL)
+            merge_ops = []
+            # merge_ops = ['-ignore-fp']
+            subprocess.check_call([merge_bin, tmp, seed] + merge_ops, stderr=subprocess.DEVNULL)
             ref_out = os.path.join(tmp, 'ref.ll')
             subprocess.check_call([llvm_opt,'-passes='+pass_name, seed, '-o', ref_out, '-S'], stderr=subprocess.DEVNULL)
             return (seed, ref_out)
@@ -83,18 +96,26 @@ ref_cost = dict()
 for k, v in tests:
     ref_cost[v] = parse_cost(subprocess.check_output([cost_bin, v]).decode())
 
-def compare(before, after):
+def compare(before, after, precond):
     if before in ref_cost:
         before_cost = ref_cost[before]
     else:
         before_cost = parse_cost(subprocess.check_output([cost_bin, before]).decode())
     after_cost = parse_cost(subprocess.check_output([cost_bin, after]).decode())
+    if precond is not None:
+        if precond in ref_cost:
+            precond_cost = ref_cost[precond]
+        else:
+            precond_cost = parse_cost(subprocess.check_output([cost_bin, precond]).decode())
 
     for k in after_cost.keys():
         if k not in before_cost:
             continue
         # print(k, before_cost[k], after_cost[k])
         if before_cost[k] < after_cost[k]:
+            if precond is not None:
+                if before_cost[k] < precond_cost[k]:
+                    continue
             print(k)
             return True 
     return False
@@ -103,7 +124,7 @@ recipes = ['correctness', 'commutative', 'multi-use', 'canonical-form']
 
 def check(id):
     # recipe = random.choice(recipes)
-    recipe = recipes[1]
+    recipe = recipes[2]
     seed, seed_ref = random.choice(tests)
     if check_once_impl(id, work_dir, recipe, seed, seed_ref, mutate_bin, llvm_opt, alive2_tv, pass_name, compare):
         return (id, recipe, seed)

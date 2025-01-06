@@ -104,18 +104,26 @@ def parse_cost(output: str):
 
 ref_cost = parse_cost(subprocess.check_output([cost_bin, seeds_ref]).decode())
 
-def compare(before, after):
+def compare(before, after, precond):
     if before == seeds_ref:
         before_cost = ref_cost
     else:
         before_cost = parse_cost(subprocess.check_output([cost_bin, before]).decode())
     after_cost = parse_cost(subprocess.check_output([cost_bin, after]).decode())
+    if precond is not None:
+        if precond == seeds_ref:
+            precond_cost = ref_cost
+        else:
+            precond_cost = parse_cost(subprocess.check_output([cost_bin, precond]).decode())
 
     for k in after_cost.keys():
         if k not in before_cost:
             continue
         # print(k, before_cost[k], after_cost[k])
         if before_cost[k] < after_cost[k]:
+            if precond is not None:
+                if before_cost[k] < precond_cost[k]:
+                    continue
             return True 
     return False
 

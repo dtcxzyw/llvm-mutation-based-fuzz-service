@@ -234,6 +234,8 @@ int main(int argc, char **argv) {
                 case Intrinsic::minimumnum:
                 case Intrinsic::minnum:
                   Known = true;
+                case Intrinsic::assume:
+                  Known = !II->hasOperandBundles();
                 default:
                   break;
                 }
