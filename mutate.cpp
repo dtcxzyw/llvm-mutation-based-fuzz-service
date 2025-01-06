@@ -556,9 +556,12 @@ bool commuteOperandsOfCommutativeInst(Instruction &I) {
     Value *X;
     if (match(SI->getCondition(), m_Not(m_Value(X))))
       SI->setCondition(X);
-    else if (auto *Cmp = dyn_cast<CmpInst>(SI->getCondition()))
-      Cmp->setPredicate(Cmp->getInversePredicate());
-    else
+    else if (auto *Cmp = dyn_cast<CmpInst>(SI->getCondition())) {
+      if (Cmp->hasOneUse())
+        Cmp->setPredicate(Cmp->getInversePredicate());
+      else
+        return false;
+    } else
       return false;
     SI->swapValues();
     return true;
