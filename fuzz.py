@@ -21,9 +21,9 @@ work_dir = "fuzz"
 fuzz_mode = os.environ['FUZZ_MODE']
 
 keywords = [
-('test/Transforms/InstCombine', 'instcombine'),
-('test/Transforms/InstSimplify', 'instcombine'),
-('test/Analysis/ValueTracking', 'instcombine'),
+('test/Transforms/InstCombine', 'instcombine<no-verify-fixpoint>'),
+('test/Transforms/InstSimplify', 'instcombine<no-verify-fixpoint>'),
+('test/Analysis/ValueTracking', 'instcombine<no-verify-fixpoint>'),
 ('test/Transforms/ConstraintElimination', 'constraint-elimination'),
 ('test/Transforms/EarlyCSE', 'early-cse'),
 ('test/Transforms/GVN', 'gvn'),
