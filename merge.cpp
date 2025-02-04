@@ -12,6 +12,7 @@
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Analysis/InstructionSimplify.h>
 #include <llvm/IR/Argument.h>
+#include <llvm/IR/AttributeMask.h>
 #include <llvm/IR/Attributes.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constant.h>
@@ -195,6 +196,19 @@ int main(int argc, char **argv) {
               }
             }
             if (auto *Call = dyn_cast<CallBase>(&I)) {
+              // FIXME: Alive2 do not respect call-site attrs.
+              AttributeMask AttrsToRemove;
+              AttrsToRemove.addAttribute(Attribute::NoUndef);
+              AttrsToRemove.addAttribute(Attribute::NonNull);
+              AttrsToRemove.addAttribute(Attribute::Range);
+              AttrsToRemove.addAttribute(Attribute::Alignment);
+              AttrsToRemove.addAttribute(Attribute::Dereferenceable);
+              AttrsToRemove.addAttribute(Attribute::DereferenceableOrNull);
+              AttrsToRemove.addAttribute(Attribute::NoFPClass);
+              for (auto &Arg : Call->args())
+                Call->removeParamAttrs(Call->getArgOperandNo(&Arg),
+                                       AttrsToRemove);
+
               bool Known = false;
               if (auto *II = dyn_cast<IntrinsicInst>(Call)) {
                 switch (II->getIntrinsicID()) {

@@ -46,6 +46,9 @@ block_list = [
     "minmax-fp.ll",  # https://github.com/llvm/llvm-project/issues/121786
     "fast-basictest.ll",  # https://github.com/llvm/llvm-project/issues/121790
     "opaque-ptr.ll",  # https://alive2.llvm.org/ce/z/FMkBmZ
+    "fneg-fabs.ll",  # https://github.com/AliveToolkit/alive2/pull/1155
+    "simplify-demanded-fpclass.ll",  # https://github.com/AliveToolkit/alive2/pull/1155
+    "unordered-fcmp-select.ll",  # https://alive2.llvm.org/ce/z/xz-He7
 ]
 
 
@@ -130,7 +133,7 @@ recipes = ["correctness", "commutative", "multi-use", "canonical-form"]
 
 def check(id):
     # recipe = random.choice(recipes)
-    recipe = recipes[2]
+    recipe = recipes[0]
     seed, seed_ref = random.choice(tests)
     if check_once_impl(
         id,
