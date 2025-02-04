@@ -474,6 +474,8 @@ bool canonicalizeOp(Instruction &I) {
   // xor/add -> or disjoint
   case Instruction::Xor:
   case Instruction::Add:
+    if (I.getType()->isIntOrIntVectorTy(1))
+      break;
     return createNewInst(I, [&](IRBuilder<> &Builder) {
       auto *Val =
           Builder.CreateOr(I.getOperand(0), I.getOperand(1), I.getName());
