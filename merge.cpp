@@ -285,7 +285,7 @@ int main(int argc, char **argv) {
               } else if (match(U.get(), m_Constant(C)) &&
                          C->containsUndefOrPoisonElement()) {
                 Constant *ReplaceC =
-                    Constant::getNullValue(I.getType()->getScalarType());
+                    Constant::getNullValue(C->getType()->getScalarType());
                 U.set(Constant::replaceUndefsWith(C, ReplaceC));
               }
             }
