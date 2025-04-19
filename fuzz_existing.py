@@ -47,6 +47,7 @@ block_list = [
     "fneg-fabs.ll",  # https://github.com/AliveToolkit/alive2/pull/1155
     "simplify-demanded-fpclass.ll",  # https://github.com/AliveToolkit/alive2/pull/1155
     "unordered-fcmp-select.ll",  # https://alive2.llvm.org/ce/z/xz-He7
+    "fcmp-select.ll",  # https://github.com/llvm/llvm-project/issues/136430
 ]
 
 
