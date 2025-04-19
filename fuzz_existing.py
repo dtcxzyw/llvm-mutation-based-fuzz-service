@@ -48,6 +48,8 @@ block_list = [
     "simplify-demanded-fpclass.ll",  # https://github.com/AliveToolkit/alive2/pull/1155
     "unordered-fcmp-select.ll",  # https://alive2.llvm.org/ce/z/xz-He7
     "fcmp-select.ll",  # https://github.com/llvm/llvm-project/issues/136430
+    "intrinsic-select.ll",  # https://alive2.llvm.org/ce/z/QRqNcr
+    "select-binop-foldable-floating-point.ll",  # https://alive2.llvm.org/ce/z/iLmXch
 ]
 
 
