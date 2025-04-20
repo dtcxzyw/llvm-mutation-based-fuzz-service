@@ -50,6 +50,9 @@ block_list = [
     "fcmp-select.ll",  # https://github.com/llvm/llvm-project/issues/136430
     "intrinsic-select.ll",  # https://alive2.llvm.org/ce/z/QRqNcr
     "select-binop-foldable-floating-point.ll",  # https://alive2.llvm.org/ce/z/iLmXch
+    "cast.ll",  # https://alive2.llvm.org/ce/z/CD7axf
+    "known-bits.ll",  # https://alive2.llvm.org/ce/z/SwGU8G
+    "fpclass-from-dom-cond.ll",  # https://alive2.llvm.org/ce/z/MBP2JY
 ]
 
 
