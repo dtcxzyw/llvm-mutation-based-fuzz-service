@@ -53,6 +53,8 @@ block_list = [
     "cast.ll",  # https://alive2.llvm.org/ce/z/CD7axf
     "known-bits.ll",  # https://alive2.llvm.org/ce/z/SwGU8G
     "fpclass-from-dom-cond.ll",  # https://alive2.llvm.org/ce/z/MBP2JY
+    "select-select.ll",  # https://alive2.llvm.org/ce/z/weke43
+    "create-class-from-logic-fcmp.ll",  # https://alive2.llvm.org/ce/z/nQYKsP
 ]
 
 
