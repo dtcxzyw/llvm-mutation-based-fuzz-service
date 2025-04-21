@@ -55,6 +55,9 @@ block_list = [
     "fpclass-from-dom-cond.ll",  # https://alive2.llvm.org/ce/z/MBP2JY
     "select-select.ll",  # https://alive2.llvm.org/ce/z/weke43
     "create-class-from-logic-fcmp.ll",  # https://alive2.llvm.org/ce/z/nQYKsP
+    "fneg.ll",  # https://alive2.llvm.org/ce/z/Nn4Vc5
+    "and-fcmp.ll",  # https://alive2.llvm.org/ce/z/NXZfYL
+    "vector_gep2.ll",  # https://alive2.llvm.org/ce/z/QjhANo
 ]
 
 
