@@ -50,14 +50,14 @@ block_list = [
     "fcmp-select.ll",  # https://github.com/llvm/llvm-project/issues/136430
     "intrinsic-select.ll",  # https://alive2.llvm.org/ce/z/QRqNcr
     "select-binop-foldable-floating-point.ll",  # https://alive2.llvm.org/ce/z/iLmXch
-    "cast.ll",  # https://alive2.llvm.org/ce/z/CD7axf
+    "cast.ll",  # https://github.com/AliveToolkit/alive2/issues/1189
     "known-bits.ll",  # https://alive2.llvm.org/ce/z/SwGU8G
     "fpclass-from-dom-cond.ll",  # https://alive2.llvm.org/ce/z/MBP2JY
     "select-select.ll",  # https://alive2.llvm.org/ce/z/weke43
     "create-class-from-logic-fcmp.ll",  # https://alive2.llvm.org/ce/z/nQYKsP
     "fneg.ll",  # https://alive2.llvm.org/ce/z/Nn4Vc5
     "and-fcmp.ll",  # https://alive2.llvm.org/ce/z/NXZfYL
-    "vector_gep2.ll",  # https://alive2.llvm.org/ce/z/QjhANo
+    "vector_gep2.ll",  # https://github.com/AliveToolkit/alive2/issues/1189
 ]
 
 
