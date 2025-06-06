@@ -782,8 +782,10 @@ int main(int argc, char **argv) {
       ErasedFuncs.push_back(Func);
     }
   }
-  for (auto *Func : ErasedFuncs)
+  for (auto *Func : ErasedFuncs) {
+    Func->replaceAllUsesWith(PoisonValue::get(Func->getType()));
     Func->eraseFromParent();
+  }
 
   // if (verifyModule(*M, &errs()))
   //   return EXIT_FAILURE;

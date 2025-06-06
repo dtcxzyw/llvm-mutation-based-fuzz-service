@@ -27,12 +27,7 @@ seed_dir = os.path.join(work_dir, "seed")
 os.makedirs(seed_dir)
 
 block_list = [
-    "minmax-fold.ll",  # Known FP issue
-    "clamp-to-minmax.ll",
     "loadstore-metadata.ll",  # noalias.addrspace
-    "fabs.ll",
-    "fpcast.ll",
-    "fcmp.ll",
     "icmp-equality-test.ll",  # https://github.com/llvm/llvm-project/issues/121702
     "preserve-sminmax.ll",  # https://github.com/llvm/llvm-project/issues/121772
     "select-imm-canon.ll",  # https://github.com/llvm/llvm-project/issues/121774
@@ -42,20 +37,14 @@ block_list = [
     "matching-binops.ll",
     "minmax-fp.ll",  # https://github.com/llvm/llvm-project/issues/121786
     "fast-basictest.ll",  # https://github.com/llvm/llvm-project/issues/121790
-    "fneg-fabs.ll",  # https://github.com/llvm/llvm-project/pull/136648
-    "simplify-demanded-fpclass.ll",  # https://github.com/llvm/llvm-project/pull/136648
-    "unordered-fcmp-select.ll",  # https://alive2.llvm.org/ce/z/xz-He7
-    "fcmp-select.ll",  # https://github.com/llvm/llvm-project/issues/136430
-    "intrinsic-select.ll",  # https://alive2.llvm.org/ce/z/QRqNcr
-    "select-binop-foldable-floating-point.ll",  # https://alive2.llvm.org/ce/z/iLmXch
     "cast.ll",  # https://github.com/AliveToolkit/alive2/issues/1189
-    "known-bits.ll",  # https://alive2.llvm.org/ce/z/SwGU8G
-    "fpclass-from-dom-cond.ll",  # https://alive2.llvm.org/ce/z/MBP2JY
-    "select-select.ll",  # https://alive2.llvm.org/ce/z/weke43
-    "create-class-from-logic-fcmp.ll",  # https://alive2.llvm.org/ce/z/nQYKsP
-    "fneg.ll",  # https://alive2.llvm.org/ce/z/Nn4Vc5
-    "and-fcmp.ll",  # https://alive2.llvm.org/ce/z/sK5gZ7
     "vector_gep2.ll",  # https://github.com/AliveToolkit/alive2/issues/1189
+    "clamp-to-minmax.ll",  # https://github.com/llvm/llvm-project/issues/143120
+    "fabs.ll",  # https://github.com/llvm/llvm-project/issues/143122
+    "unordered-fcmp-select.ll",  # https://github.com/llvm/llvm-project/issues/143123
+    "copysign.ll",  # https://alive2.llvm.org/ce/z/uVhjJS
+    "simplify-demanded-fpclass.ll",  # https://alive2.llvm.org/ce/z/9KZBCB
+    "fpclass-from-dom-cond.ll",  # https://alive2.llvm.org/ce/z/FLRYV5
 ]
 
 
