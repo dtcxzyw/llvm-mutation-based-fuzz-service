@@ -58,7 +58,7 @@ os.makedirs(work_dir)
 def collect_seeds():
     seeds = set()
     current_file = ""
-    pattern = re.compile(r'define .+ @([.\w]+)\(')
+    pattern = re.compile(r'define .+ @([-.\w]+)\(')
 
     with open(patch_file, 'r') as f:
         for line in f:
