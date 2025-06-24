@@ -283,6 +283,7 @@ int main(int argc, char **argv) {
                   (isa<UndefValue>(U) && !isa<PoisonValue>(U))) {
                 U.set(Constant::getNullValue(U->getType()));
               } else if (match(U.get(), m_Constant(C)) &&
+                         !isa<PoisonValue>(C) &&
                          C->containsUndefOrPoisonElement()) {
                 Constant *ReplaceC =
                     Constant::getNullValue(C->getType()->getScalarType());
