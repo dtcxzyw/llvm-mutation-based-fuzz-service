@@ -173,7 +173,7 @@ int main(int argc, char **argv) {
                                            Attribute::Dereferenceable,
                                            Attribute::Range});
             if (hasUnsupportedType(I) ||
-                I.getOpcode() == Instruction::IntToPtr || isa<StoreInst>(I) ||
+                I.getOpcode() == Instruction::IntToPtr ||
                 isa<AtomicRMWInst>(I) || isa<AtomicCmpXchgInst>(I) ||
                 isa<AllocaInst>(I)) {
               ErasedGlobals.insert(&F);
@@ -181,6 +181,12 @@ int main(int argc, char **argv) {
             }
             if (auto *Load = dyn_cast<LoadInst>(&I)) {
               if (!Load->isSimple()) {
+                ErasedGlobals.insert(&F);
+                break;
+              }
+            }
+            if (auto *Store = dyn_cast<StoreInst>(&I)) {
+              if (!Store->isSimple()) {
                 ErasedGlobals.insert(&F);
                 break;
               }
@@ -310,8 +316,10 @@ int main(int argc, char **argv) {
       Linker::linkModules(OutM, std::move(M));
     }
 
-    if (OutM.empty() || ++IterCount > BatchSize)
+    if (OutM.empty() || ++IterCount > BatchSize) {
+      errs() << "No valid functions found in " << SeedsDir << '\n';
       return EXIT_FAILURE;
+    }
   }
 
   // TODO: set datalayout for pointer width
