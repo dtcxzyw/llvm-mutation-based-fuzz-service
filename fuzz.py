@@ -32,6 +32,7 @@ keywords = [
 ('test/Transforms/SCCP', 'sccp'),
 ('test/Transforms/CorrelatedValuePropagation', 'correlated-propagation'),
 ('test/Transforms/SimplifyCFG', 'simplifycfg'),
+('test/Transforms/VectorCombine', 'vector-combine'),
 ('PhaseOrdering', 'default<O3>'),
 ]
 
