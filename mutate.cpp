@@ -97,6 +97,29 @@ bool mutateConstant(Instruction &I) {
             APInt(C->getBitWidth(), randomUInt(C->getBitWidth() - 1))));
         return true;
       }
+      if (I.getOpcode() == Instruction::ExtractElement &&
+          &Op == &I.getOperandUse(1)) {
+        Op.set(ConstantInt::get(
+            Op->getType(),
+            APInt(C->getBitWidth(),
+                  randomUInt(cast<VectorType>(I.getOperand(0)->getType())
+                                 ->getElementCount()
+                                 .getKnownMinValue() -
+                             1))));
+        return true;
+      }
+      if (I.getOpcode() == Instruction::ExtractValue &&
+          &Op == &I.getOperandUse(1)) {
+        Type *SrcTy = I.getOperand(0)->getType();
+        Op.set(ConstantInt::get(
+            Op->getType(),
+            APInt(C->getBitWidth(),
+                  randomUInt((SrcTy->isStructTy()
+                                  ? SrcTy->getStructNumElements()
+                                  : SrcTy->getArrayNumElements()) -
+                             1))));
+        return true;
+      }
 
       switch (randomUInt(3)) {
       case 0: {
@@ -542,9 +565,6 @@ bool commuteOperands(Instruction &I) {
   if (I.getOperand(0)->getType() != I.getOperand(1)->getType())
     return false;
   if (isa<CallInst>(I) && !I.isCommutative())
-    return false;
-  // Workaround for alive2 bug
-  if (I.isShift() && isa<Constant>(I.getOperand(0)))
     return false;
   I.getOperandUse(0).swap(I.getOperandUse(1));
   return true;
