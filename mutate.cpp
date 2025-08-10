@@ -677,10 +677,47 @@ bool replaceArgUse(Instruction &I) {
   Op->replaceAllUsesWith(Replacements[randomUInt(Replacements.size() - 1)]);
   return true;
 }
+bool insertNodes(Instruction &I) {
+  if (I.use_empty() || I.isTerminator())
+    return false;
+  Type *Ty = I.getType();
+  if (randomBool() && (Ty->isIntOrIntVectorTy() || Ty->isPtrOrPtrVectorTy() ||
+                       Ty->isFPOrFPVectorTy())) {
+    for (auto &U : I.uses()) {
+      if (isa<PHINode>(U.getUser()))
+        continue;
+      if (randomBool()) {
+        IRBuilder<> Builder(cast<Instruction>(U.getUser()));
+        U.set(Builder.CreateFreeze(&I));
+        return true;
+      }
+    }
+  }
+
+  if (Ty->isFPOrFPVectorTy()) {
+    for (auto &U : I.uses()) {
+      if (isa<PHINode>(U.getUser()))
+        continue;
+      if (randomBool()) {
+        IRBuilder<> Builder(cast<Instruction>(U.getUser()));
+        Value *V;
+        switch (randomUInt(1)) {
+        case 0:
+          V = Builder.CreateFNeg(&I);
+        case 1:
+          V = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, &I);
+        }
+        U.set(V);
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 // Recipes
 bool mutateInst(Instruction &I) {
-  switch (randomUInt(5)) {
+  switch (randomUInt(6)) {
   case 0:
     return mutateConstant(I);
   case 1:
@@ -693,6 +730,8 @@ bool mutateInst(Instruction &I) {
     return commuteOperands(I);
   case 5:
     return replaceArgUse(I);
+  case 6:
+    return insertNodes(I);
   }
   llvm_unreachable("Unreachable code");
 }
