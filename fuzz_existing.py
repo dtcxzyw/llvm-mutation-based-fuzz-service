@@ -131,7 +131,7 @@ def check(id):
     # recipe = random.choice(recipes)
     recipe = recipes[0]
     seed, seed_ref = random.choice(tests)
-    if check_once_impl(
+    filename, res, reason = check_once_impl(
         id,
         work_dir,
         recipe,
@@ -142,8 +142,9 @@ def check(id):
         alive2_tv,
         pass_name,
         compare,
-    ):
-        return (id, recipe, seed)
+    )
+    if res:
+        return (id, recipe, seed, reason)
     return None
 
 
@@ -153,7 +154,7 @@ with Pool(processes) as pool:
         progress.update()
         if res is None:
             continue
-        id, recipe, seed = res
-        progress.write(f"{id} {recipe} {seed}")
+        id, recipe, seed, reason = res
+        progress.write(f"{id} {recipe} {seed} {reason}")
         # exit(1)
 progress.close()
