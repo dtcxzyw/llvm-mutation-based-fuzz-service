@@ -115,7 +115,7 @@ def parse_cost(output: str):
     res = dict()
     for line in output.splitlines():
         k, v = line.strip().split(" ")
-        res[k] = int(v)
+        res[k.removesuffix(":")] = int(v)
     return res
 
 
