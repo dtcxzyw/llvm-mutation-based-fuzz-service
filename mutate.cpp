@@ -168,6 +168,56 @@ bool mutateConstant(Instruction &I) {
       }
       return true;
     }
+    const APFloat *F;
+    if (match(Op.get(), m_APFloat(F))) {
+      APFloat New = *F;
+      switch (randomUInt(4)) {
+      case 0:
+        New.changeSign();
+        break;
+      case 1:
+        New.next(true);
+        break;
+      case 2:
+        New.next(false);
+        break;
+      case 3: {
+        uint64_t Raw = Gen();
+        unsigned BitWidth = APFloat::getSizeInBits(New.getSemantics());
+        New = APFloat(New.getSemantics(), APInt(BitWidth, Raw, false, true));
+        break;
+      }
+      case 4: {
+        switch (randomUInt(5)) {
+        case 0:
+          New = APFloat::getZero(New.getSemantics());
+          break;
+        case 1:
+          New = APFloat::getInf(New.getSemantics());
+          break;
+        case 2:
+          New = APFloat::getQNaN(New.getSemantics());
+          break;
+        case 3:
+          New = APFloat::getSmallest(New.getSemantics());
+          break;
+        case 4:
+          New = APFloat::getLargest(New.getSemantics());
+          break;
+        case 5:
+          New = APFloat::getSmallestNormalized(New.getSemantics());
+          break;
+        }
+        if (randomBool())
+          New.changeSign();
+        break;
+      }
+      }
+      if (New.bitwiseIsEqual(*F))
+        return false;
+      Op.set(ConstantFP::get(Op->getContext(), New));
+      return true;
+    }
   }
   return false;
 }
