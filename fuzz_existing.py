@@ -119,8 +119,8 @@ def compare(before, after, precond):
             if precond is not None:
                 if before_cost[k] < precond_cost[k]:
                     continue
-            print(k)
-            return True
+            # print(k)
+            return k
     return False
 
 

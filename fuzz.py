@@ -191,8 +191,8 @@ def check(recipe_arg, time_budget):
                         name = file.split(".")[0]
                         if name in kept_files:
                             continue
-                        cnt -= 1
-                        if cnt >= 0 and name in reason_dict:
+                        if cnt > 0 and name in reason_dict:
+                            cnt -= 1
                             kept_files.append(name)
                             if reason_dict[name] != "":
                                 print(name, reason_dict[name])

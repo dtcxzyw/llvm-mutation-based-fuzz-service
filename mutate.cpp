@@ -215,7 +215,7 @@ bool mutateConstant(Instruction &I) {
       }
       if (New.bitwiseIsEqual(*F))
         return false;
-      Op.set(ConstantFP::get(Op->getContext(), New));
+      Op.set(ConstantFP::get(Op->getType(), New));
       return true;
     }
   }
