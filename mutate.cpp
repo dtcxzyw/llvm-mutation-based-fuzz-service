@@ -400,7 +400,8 @@ bool mutateFlags(Instruction &I, bool Add) {
             if (IID == Intrinsic::fabs || IID == Intrinsic::copysign)
               return false;
           }
-          if (I.getOpcode() == Instruction::FNeg)
+          if (I.getOpcode() == Instruction::FNeg ||
+              I.getOpcode() == Instruction::Select)
             return false;
           I.setHasNoSignedZeros(true);
           return true;

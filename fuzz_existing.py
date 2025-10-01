@@ -45,6 +45,7 @@ block_list = [
     "copysign.ll",  # https://alive2.llvm.org/ce/z/uVhjJS
     "simplify-demanded-fpclass.ll",  # https://alive2.llvm.org/ce/z/9KZBCB
     "fpclass-from-dom-cond.ll",  # https://alive2.llvm.org/ce/z/FLRYV5
+    "icmp-custom-dl.ll", # https://alive2.llvm.org/ce/z/GAJKhi
 ]
 
 
