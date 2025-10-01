@@ -393,6 +393,15 @@ bool mutateFlags(Instruction &I, bool Add) {
         break;
       case 2:
         if (!FPOp->hasNoSignedZeros()) {
+          // See
+          // https://discourse.llvm.org/t/rfc-clarify-the-behavior-of-fp-operations-on-bit-strings-with-nsz-flag/85981
+          if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+            auto IID = II->getIntrinsicID();
+            if (IID == Intrinsic::fabs || IID == Intrinsic::copysign)
+              return false;
+          }
+          if (I.getOpcode() == Instruction::FNeg)
+            return false;
           I.setHasNoSignedZeros(true);
           return true;
         }
@@ -527,7 +536,45 @@ bool mutateOpcode(Instruction &I) {
           I.getOperand(0), I.getOperand(1), I.getName());
     });
   // [s|u]max/min
+  if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(&I)) {
+    Intrinsic::ID IID[] = {Intrinsic::smax, Intrinsic::smin, Intrinsic::umax,
+                           Intrinsic::umin};
+    uint32_t CurrentId = 0;
+    switch (MinMax->getIntrinsicID()) {
+    case Intrinsic::smax:
+      CurrentId = 0;
+      break;
+    case Intrinsic::smin:
+      CurrentId = 1;
+      break;
+    case Intrinsic::umax:
+      CurrentId = 2;
+      break;
+    case Intrinsic::umin:
+      CurrentId = 3;
+      break;
+    default:
+      llvm_unreachable("Unexpected MinMaxIntrinsic");
+    }
+    return createNewInst(I, [&](IRBuilder<> &Builder) {
+      return Builder.CreateBinaryIntrinsic(
+          IID[(CurrentId + randomInt(1, 3)) % 4], MinMax->getOperand(0),
+          MinMax->getOperand(1));
+    });
+  }
   // [s|u]cmp
+  if (auto *Cmp = dyn_cast<CmpIntrinsic>(&I)) {
+    if (Cmp->isSigned())
+      return createNewInst(I, [&](IRBuilder<> &Builder) {
+        return Builder.CreateIntrinsic(
+            Cmp->getType(), Intrinsic::ucmp,
+            {Cmp->getOperand(0), Cmp->getOperand(1)});
+      });
+    return createNewInst(I, [&](IRBuilder<> &Builder) {
+      return Builder.CreateIntrinsic(Cmp->getType(), Intrinsic::scmp,
+                                     {Cmp->getOperand(0), Cmp->getOperand(1)});
+    });
+  }
   return false;
 }
 bool canonicalizeOp(Instruction &I) {
@@ -755,6 +802,11 @@ bool insertNodes(Instruction &I) {
         case 0:
           V = Builder.CreateFNeg(&I);
         case 1:
+          if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+            auto IID = II->getIntrinsicID();
+            if (IID == Intrinsic::fabs)
+              return false;
+          }
           V = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, &I);
         }
         U.set(V);

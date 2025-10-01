@@ -165,6 +165,8 @@ int main(int argc, char **argv) {
 
         for (auto &Arg : F.args()) {
           Arg.removeAttr(Attribute::NoAlias);
+          Arg.removeAttr(Attribute::StructRet);
+          Arg.removeAttr(Attribute::SwiftError);
         }
 
         for (auto &BB : F) {
