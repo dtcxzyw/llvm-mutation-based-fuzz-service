@@ -378,7 +378,7 @@ bool mutateFlags(Instruction &I, bool Add) {
   }
   if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
     if (Add) {
-      switch (randomUInt(2)) {
+      switch (randomUInt(1)) {
       case 0:
         if (!FPOp->hasNoInfs()) {
           I.setHasNoInfs(true);
@@ -391,22 +391,23 @@ bool mutateFlags(Instruction &I, bool Add) {
           return true;
         }
         break;
-      case 2:
-        if (!FPOp->hasNoSignedZeros()) {
-          // See
-          // https://discourse.llvm.org/t/rfc-clarify-the-behavior-of-fp-operations-on-bit-strings-with-nsz-flag/85981
-          if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-            auto IID = II->getIntrinsicID();
-            if (IID == Intrinsic::fabs || IID == Intrinsic::copysign)
-              return false;
-          }
-          if (I.getOpcode() == Instruction::FNeg ||
-              I.getOpcode() == Instruction::Select)
-            return false;
-          I.setHasNoSignedZeros(true);
-          return true;
-        }
-        break;
+        // case 2:
+        //   if (!FPOp->hasNoSignedZeros()) {
+        //     // See
+        //     //
+        //     https://discourse.llvm.org/t/rfc-clarify-the-behavior-of-fp-operations-on-bit-strings-with-nsz-flag/85981
+        //     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+        //       auto IID = II->getIntrinsicID();
+        //       if (IID == Intrinsic::fabs || IID == Intrinsic::copysign)
+        //         return false;
+        //     }
+        //     if (I.getOpcode() == Instruction::FNeg ||
+        //         I.getOpcode() == Instruction::Select)
+        //       return false;
+        //     I.setHasNoSignedZeros(true);
+        //     return true;
+        //   }
+        //   break;
       }
     } else {
       switch (randomUInt(2)) {
@@ -576,6 +577,16 @@ bool mutateOpcode(Instruction &I) {
                                      {Cmp->getOperand(0), Cmp->getOperand(1)});
     });
   }
+  // fshl/fshr
+  if (match(&I, m_Intrinsic<Intrinsic::fshl>()) ||
+      match(&I, m_Intrinsic<Intrinsic::fshr>()))
+    return createNewInst(I, [&](IRBuilder<> &Builder) {
+      return Builder.CreateIntrinsic(
+          I.getType(),
+          match(&I, m_Intrinsic<Intrinsic::fshl>()) ? Intrinsic::fshr
+                                                    : Intrinsic::fshl,
+          {I.getOperand(0), I.getOperand(1), I.getOperand(2)});
+    });
   return false;
 }
 bool canonicalizeOp(Instruction &I) {
