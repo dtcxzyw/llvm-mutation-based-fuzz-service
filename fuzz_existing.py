@@ -46,6 +46,9 @@ block_list = [
     "simplify-demanded-fpclass.ll",  # https://alive2.llvm.org/ce/z/9KZBCB
     "fpclass-from-dom-cond.ll",  # https://alive2.llvm.org/ce/z/FLRYV5
     "icmp-custom-dl.ll", # https://alive2.llvm.org/ce/z/GAJKhi
+    "fcmp.ll", # https://github.com/llvm/llvm-project/issues/161525
+    "select-binop-foldable-floating-point.ll", # https://github.com/llvm/llvm-project/issues/161634
+    "select-gep.ll", # https://github.com/llvm/llvm-project/issues/161636
 ]
 
 

@@ -793,7 +793,7 @@ bool insertNodes(Instruction &I) {
   if (randomBool() && (Ty->isIntOrIntVectorTy() || Ty->isPtrOrPtrVectorTy() ||
                        Ty->isFPOrFPVectorTy())) {
     for (auto &U : I.uses()) {
-      if (isa<PHINode>(U.getUser()))
+      if (isa<PHINode>(U.getUser()) || isa<FreezeInst>(U.getUser()))
         continue;
       if (randomBool()) {
         IRBuilder<> Builder(cast<Instruction>(U.getUser()));
