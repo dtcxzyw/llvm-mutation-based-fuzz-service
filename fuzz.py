@@ -197,7 +197,10 @@ def check(recipe_arg, time_budget):
                             if reason_dict[name] != "":
                                 print(name, reason_dict[name])
                         else:
-                            os.remove(os.path.join(work_dir, file))
+                            try:
+                                os.remove(os.path.join(work_dir, file))
+                            except Exception:
+                                pass
                 return True
             idx += files_per_iter
     return False
