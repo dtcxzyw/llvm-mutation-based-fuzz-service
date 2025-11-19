@@ -33,6 +33,7 @@ keywords = [
     ("test/Transforms/CorrelatedValuePropagation", "correlated-propagation"),
     ("test/Transforms/SimplifyCFG", "simplifycfg"),
     ("test/Transforms/VectorCombine", "vector-combine"),
+    ("test/Transforms/AggressiveInstCombine", "aggressive-instcombine"),
     ("PhaseOrdering", "default<O3>"),
 ]
 
