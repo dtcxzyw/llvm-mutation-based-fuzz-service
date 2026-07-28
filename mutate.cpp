@@ -654,12 +654,9 @@ bool canonicalizeOp(Instruction &I) {
   return false;
 }
 bool commuteOperands(Instruction &I) {
-  if (auto *BI = dyn_cast<BranchInst>(&I)) {
-    if (BI->isConditional()) {
-      BI->swapSuccessors();
-      return true;
-    }
-    return false;
+  if (auto *BI = dyn_cast<CondBrInst>(&I)) {
+    BI->swapSuccessors();
+    return true;
   }
   if (auto *SI = dyn_cast<SelectInst>(&I)) {
     if (match(SI, m_LogicalOp(m_Value(), m_Value())))
