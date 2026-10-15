@@ -193,7 +193,7 @@ int main(int argc, char **argv) {
                 break;
               }
             }
-            if (I.isDebugOrPseudoInst()) {
+            if (isa<PseudoProbeInst, DbgInfoIntrinsic>(I)) {
               I.eraseFromParent();
               continue;
             }
